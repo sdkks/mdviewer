@@ -59,7 +59,7 @@ final class FilePickerState: ObservableObject {
         let (directory, prefix) = resolvedDirectoryAndPrefix()
 
         enumerationTask = Task {
-            try? await Task.sleep(nanoseconds: 80_000_000) // 80ms debounce
+            try? await Task.sleep(nanoseconds: 200_000_000) // 200ms debounce
             guard !Task.isCancelled else { return }
             self.candidates = []
             self.selectedIndex = nil
