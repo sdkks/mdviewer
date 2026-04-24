@@ -35,7 +35,7 @@ NEW_BUILD=$((CURRENT_BUILD + 1))
 yq eval ".targets.MDViewer.settings.base.MARKETING_VERSION = \"${NEW_VERSION}\"" -i project.yml
 yq eval ".targets.MDViewer.settings.base.CURRENT_PROJECT_VERSION = \"${NEW_BUILD}\"" -i project.yml
 xcodegen generate
-git add project.yml MDViewer.xcodeproj
+git add project.yml
 git commit -m "chore: bump version to v${NEW_VERSION} (build ${NEW_BUILD})"
 git tag -a "v${NEW_VERSION}" -m "v${NEW_VERSION}"
 
