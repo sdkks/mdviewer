@@ -33,7 +33,11 @@ A minimal macOS Markdown viewer. No editor, no bloat — just clean rendering wi
 
 Download the latest `.app` from [Releases](https://github.com/sdkks/mdviewer/releases), unzip, and drag to `/Applications`.
 
-> **First launch:** macOS may show "cannot be opened because the developer cannot be verified". Right-click the app and choose **Open** to bypass Gatekeeper. This is expected for unsigned open-source builds.
+> **First launch — Gatekeeper:** macOS will block the app with a warning on first open. Run this once in Terminal, then double-click normally:
+> ```bash
+> xattr -dr com.apple.quarantine /Applications/MDViewer.app
+> ```
+> This is expected for unsigned open-source builds. On macOS 14 and earlier you can also right-click > Open instead.
 
 ## Keyboard Shortcuts
 
