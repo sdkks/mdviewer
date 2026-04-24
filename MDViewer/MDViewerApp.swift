@@ -18,6 +18,57 @@ enum AppearanceMode: String, CaseIterable {
     }
 }
 
+struct MDViewerCommands: Commands {
+    @FocusedValue(\.documentState) private var documentState: DocumentState?
+
+    var body: some Commands {
+        CommandMenu("Navigate") {
+            Button("Previous File") {
+                documentState?.navigatePrevious()
+            }
+            .keyboardShortcut(.leftArrow, modifiers: .command)
+            .disabled(documentState == nil)
+
+            Button("Next File") {
+                documentState?.navigateNext()
+            }
+            .keyboardShortcut(.rightArrow, modifiers: .command)
+            .disabled(documentState == nil)
+        }
+
+        CommandMenu("Sort By") {
+            ForEach(FileSortOrder.allCases, id: \.self) { order in
+                Button(order == .alphabetical ? "Alphabetical" : "Date Modified") {
+                    documentState?.sortOrder = order
+                }
+                .disabled(documentState == nil)
+            }
+        }
+
+        CommandGroup(after: .textEditing) {
+            Menu("Find") {
+                Button("Find\u{2026}") {
+                    documentState?.activateFind()
+                }
+                .keyboardShortcut("f", modifiers: .command)
+                .disabled(documentState == nil)
+
+                Button("Find Next") {
+                    documentState?.findNext()
+                }
+                .keyboardShortcut("g", modifiers: .command)
+                .disabled(documentState == nil)
+
+                Button("Find Previous") {
+                    documentState?.findPrevious()
+                }
+                .keyboardShortcut("g", modifiers: [.command, .shift])
+                .disabled(documentState == nil)
+            }
+        }
+    }
+}
+
 @main
 struct MDViewerApp: App {
     @AppStorage("appearanceMode") private var appearanceMode: String = AppearanceMode.system.rawValue
@@ -37,6 +88,7 @@ struct MDViewerApp: App {
             )
         }
         .commands {
+            MDViewerCommands()
             CommandGroup(after: .toolbar) {
                 Button("Reload") {
                     NotificationCenter.default.post(name: .reloadDocument, object: nil)

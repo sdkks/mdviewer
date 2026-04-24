@@ -9,6 +9,7 @@ struct ContentView: View {
     let darkThemeID: String
     @Environment(\.colorScheme) private var colorScheme
     @State private var text: String
+    @StateObject private var documentState = DocumentState()
 
     init(document: MarkdownDocument, fileURL: URL?, appearanceMode: AppearanceMode, zoomLevel: Double, lightThemeID: String, darkThemeID: String) {
         self.document = document
@@ -34,14 +35,34 @@ struct ContentView: View {
     }
 
     var body: some View {
-        MarkdownWebView(text: text, zoomLevel: zoomLevel, theme: theme)
-            .onReceive(NotificationCenter.default.publisher(for: .reloadDocument)) { _ in
-                reload()
+        ZStack(alignment: .bottom) {
+            MarkdownWebView(text: text, zoomLevel: zoomLevel, theme: theme)
+                .environmentObject(documentState)
+
+            if documentState.showFindBar {
+                FindBarView(documentState: documentState)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
+        }
+        .animation(.easeInOut(duration: 0.15), value: documentState.showFindBar)
+        .focusedSceneValue(\.documentState, documentState)
+        .navigationTitle(documentState.currentURL?.lastPathComponent ?? fileURL?.lastPathComponent ?? "")
+        .onAppear {
+            if let url = fileURL {
+                documentState.load(url: url)
+            }
+        }
+        .onChange(of: documentState.currentURL) { _ in
+            text = documentState.renderedText
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .reloadDocument)) { _ in
+            reload()
+        }
     }
 
     private func reload() {
-        guard let url = fileURL,
+        let url = documentState.currentURL ?? fileURL
+        guard let url,
               let newText = try? String(contentsOf: url, encoding: .utf8)
         else { return }
         text = newText
