@@ -22,40 +22,42 @@ A minimal macOS Markdown viewer. No editor, no bloat — just clean rendering wi
 
 ## Performance
 
-| Metric | Value |
-|--------|-------|
-| App size | < 500 KB |
+| Metric         | Value    |
+| -------------- | -------- |
+| App size       | < 500 KB |
 | Download (zip) | < 150 KB |
-| Cold start | < 50 ms |
-| Memory | < 100 MB |
+| Cold start     | < 50 ms  |
+| Memory         | < 100 MB |
 
 ## Install
 
 Download the latest `.app` from [Releases](https://github.com/sdkks/mdviewer/releases), unzip, and drag to `/Applications`.
 
 > **First launch — Gatekeeper:** macOS will block the app with a warning on first open. Run this once in Terminal, then double-click normally:
+>
 > ```bash
 > xattr -dr com.apple.quarantine /Applications/MDViewer.app
 > ```
-> This is expected for unsigned open-source builds. On macOS 14 and earlier you can also right-click > Open instead.
+>
+> This is expected for unsigned open-source builds. On macOS 14 and earlier you can also right-click > Open instead. You could build from source if you prefer. Code is here and it is pretty straightforward.
 
 ## Keyboard Shortcuts
 
-| Action | Shortcut |
-|--------|----------|
-| Previous file in directory | `Cmd ←` |
-| Next file in directory | `Cmd →` |
-| Find in document | `Cmd F` |
-| Find next match | `Cmd G` |
-| Find previous match | `Cmd Shift G` |
-| Quick open file | `Cmd K` |
-| Reload | `Cmd R` |
-| Zoom In | `Cmd +` |
-| Zoom Out | `Cmd -` |
-| Actual Size | `Cmd 0` |
-| System Appearance | `Cmd Shift 0` |
-| Light Mode | `Cmd Shift 1` |
-| Dark Mode | `Cmd Shift 2` |
+| Action                     | Shortcut      |
+| -------------------------- | ------------- |
+| Previous file in directory | `Cmd ←`       |
+| Next file in directory     | `Cmd →`       |
+| Find in document           | `Cmd F`       |
+| Find next match            | `Cmd G`       |
+| Find previous match        | `Cmd Shift G` |
+| Quick open file            | `Cmd K`       |
+| Reload                     | `Cmd R`       |
+| Zoom In                    | `Cmd +`       |
+| Zoom Out                   | `Cmd -`       |
+| Actual Size                | `Cmd 0`       |
+| System Appearance          | `Cmd Shift 0` |
+| Light Mode                 | `Cmd Shift 1` |
+| Dark Mode                  | `Cmd Shift 2` |
 
 ## Quick Open (Cmd K)
 
@@ -90,14 +92,15 @@ make build
 
 The version bump script reads the most recent commit message to decide which component to increment:
 
-| Commit prefix | Version bump |
-|---|---|
-| `Breaking:` | major (1.0.0 → 2.0.0) |
-| `Feature:` | minor (1.0.0 → 1.1.0) |
-| `Core:` | minor (1.0.0 → 1.1.0) |
-| `Fix:` | patch (1.0.0 → 1.0.1) |
+| Commit prefix | Version bump          |
+| ------------- | --------------------- |
+| `Breaking:`   | major (1.0.0 → 2.0.0) |
+| `Feature:`    | minor (1.0.0 → 1.1.0) |
+| `Core:`       | minor (1.0.0 → 1.1.0) |
+| `Fix:`        | patch (1.0.0 → 1.0.1) |
 
 Example:
+
 ```bash
 git commit -m "Feature: add table of contents sidebar"
 ```
@@ -122,9 +125,9 @@ This pushes all commits and tags, builds a Release archive, zips `MDViewer.app`,
 
 ## Dependencies
 
-| Library | Version | License | Purpose |
-|---------|---------|---------|---------|
-| [marked](https://github.com/markedjs/marked) | 15.0.7 | MIT | Markdown → HTML parsing |
+| Library                                      | Version | License | Purpose                 |
+| -------------------------------------------- | ------- | ------- | ----------------------- |
+| [marked](https://github.com/markedjs/marked) | 15.0.7  | MIT     | Markdown → HTML parsing |
 
 No Swift package dependencies. No external frameworks.
 
