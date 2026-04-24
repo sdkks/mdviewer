@@ -29,10 +29,14 @@ fi
 
 NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
 
+CURRENT_BUILD=$(grep 'CURRENT_PROJECT_VERSION' project.yml | head -1 | sed 's/.*: *//;s/"//g;s/ //g')
+NEW_BUILD=$((CURRENT_BUILD + 1))
+
 yq eval ".targets.MDViewer.settings.base.MARKETING_VERSION = \"${NEW_VERSION}\"" -i project.yml
+yq eval ".targets.MDViewer.settings.base.CURRENT_PROJECT_VERSION = \"${NEW_BUILD}\"" -i project.yml
 xcodegen generate
 git add project.yml MDViewer.xcodeproj
-git commit -m "chore: bump version to v${NEW_VERSION}"
+git commit -m "chore: bump version to v${NEW_VERSION} (build ${NEW_BUILD})"
 git tag -a "v${NEW_VERSION}" -m "v${NEW_VERSION}"
 
-echo "Bumped version: ${CURRENT} -> ${NEW_VERSION} (tag: v${NEW_VERSION})"
+echo "Bumped version: ${CURRENT} -> ${NEW_VERSION}, build: ${CURRENT_BUILD} -> ${NEW_BUILD} (tag: v${NEW_VERSION})"

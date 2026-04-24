@@ -1,5 +1,33 @@
 import SwiftUI
 
+// MARK: - About panel
+
+struct AboutView: View {
+    private let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
+    private let build   = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "?"
+    private let repoURL = URL(string: "https://github.com/sdkks/mdviewer")!
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(nsImage: NSApp.applicationIconImage)
+                .resizable()
+                .frame(width: 80, height: 80)
+
+            Text("MDViewer")
+                .font(.title2.weight(.semibold))
+
+            Text("Version \(version) (\(build))")
+                .foregroundColor(.secondary)
+                .font(.subheadline)
+
+            Link("github.com/sdkks/mdviewer", destination: repoURL)
+                .font(.subheadline)
+        }
+        .padding(24)
+        .frame(width: 280)
+    }
+}
+
 extension Notification.Name {
     static let reloadDocument = Notification.Name("reloadDocument")
 }
@@ -95,6 +123,21 @@ struct MDViewerApp: App {
             )
         }
         .commands {
+            CommandGroup(replacing: .appInfo) {
+                Button("About MDViewer") {
+                    let window = NSWindow(
+                        contentRect: .zero,
+                        styleMask: [.titled, .closable],
+                        backing: .buffered,
+                        defer: false
+                    )
+                    window.title = "About MDViewer"
+                    window.contentView = NSHostingView(rootView: AboutView())
+                    window.center()
+                    window.makeKeyAndOrderFront(nil)
+                    NSApp.runModal(for: window)
+                }
+            }
             MDViewerCommands()
             CommandGroup(after: .toolbar) {
                 Button("Reload") {
