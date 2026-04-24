@@ -59,9 +59,9 @@ struct PreferencesView: View {
                 }
             }
         }
-		.onChange(of: appearanceMode) { _, newValue in
-			updateAppAppearance(newValue)
-		}
+        .onChange(of: appearanceMode) { newValue in
+            updateAppAppearance(newValue)
+        }
         .padding(20)
         .frame(width: 300)
     }
