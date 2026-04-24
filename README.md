@@ -20,6 +20,8 @@ A minimal macOS Markdown viewer. No editor, no bloat — just clean rendering wi
 - **Native file handling** — Open, Recent Files, drag & drop
 - **< 500 KB total** — no Electron, no runtime, no dependencies
 
+![MD Viewer V2 DEMO GIF](./docs/mdviewer-v2-demo.gif)
+
 ## Performance
 
 | Metric         | Value    |
