@@ -60,7 +60,15 @@ final class DocumentState: ObservableObject {
         }
     }
 
+    @Published var showFilePicker: Bool = false
+
+    func activateFilePicker() {
+        showFindBar = false   // mutual exclusion
+        showFilePicker = true
+    }
+
     func activateFind() {
+        showFilePicker = false  // mutual exclusion
         showFindBar = true
     }
 

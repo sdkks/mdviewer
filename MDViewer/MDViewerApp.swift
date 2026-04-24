@@ -64,6 +64,13 @@ struct MDViewerCommands: Commands {
                 }
                 .keyboardShortcut("g", modifiers: [.command, .shift])
                 .disabled(documentState == nil)
+
+                Divider()
+                Button("Open File\u{2026}") {
+                    documentState?.activateFilePicker()
+                }
+                .keyboardShortcut("k", modifiers: .command)
+                .disabled(documentState == nil)
             }
         }
     }

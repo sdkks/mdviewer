@@ -8,8 +8,10 @@ struct ContentView: View {
     let lightThemeID: String
     let darkThemeID: String
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var text: String
     @StateObject private var documentState = DocumentState()
+    @State private var filePickerState: FilePickerState? = nil
 
     init(document: MarkdownDocument, fileURL: URL?, appearanceMode: AppearanceMode, zoomLevel: Double, lightThemeID: String, darkThemeID: String) {
         self.document = document
@@ -43,8 +45,17 @@ struct ContentView: View {
                 FindBarView(documentState: documentState)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
+
+            if let state = filePickerState {
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture { documentState.showFilePicker = false }
+                FilePickerView(state: state)
+                    .transition(reduceMotion ? .identity : .opacity)
+            }
         }
         .animation(.easeInOut(duration: 0.15), value: documentState.showFindBar)
+        .animation(.easeInOut(duration: 0.15), value: documentState.showFilePicker)
         .focusedSceneValue(\.documentState, documentState)
         .navigationTitle(documentState.currentURL?.lastPathComponent ?? fileURL?.lastPathComponent ?? "")
         .onAppear {
@@ -52,12 +63,40 @@ struct ContentView: View {
                 documentState.load(url: url)
             }
         }
-        .onChange(of: documentState.currentURL) { _ in
+        .onChange(of: documentState.currentURL, perform: { _ in
             text = documentState.renderedText
-        }
+        })
         .onReceive(NotificationCenter.default.publisher(for: .reloadDocument)) { _ in
             reload()
         }
+        .onChange(of: documentState.showFilePicker, perform: { isShowing in
+            if isShowing {
+                filePickerState = FilePickerState(
+                    anchorDirectory: documentState.currentURL?.deletingLastPathComponent()
+                        ?? FileManager.default.homeDirectoryForCurrentUser,
+                    onCommit: { [weak documentState] url in
+                        documentState?.showFilePicker = false
+                        // TODO(sandbox): needs security-scoped bookmark if App Sandbox entitlement is ever added
+                        NSDocumentController.shared.openDocument(
+                            withContentsOf: url,
+                            display: true
+                        ) { _, _, error in
+                            if let error {
+                                DispatchQueue.main.async { NSApplication.shared.presentError(error) }
+                            }
+                        }
+                    },
+                    onDismiss: { [weak documentState] in
+                        documentState?.showFilePicker = false
+                    }
+                )
+            } else {
+                filePickerState = nil
+                if let wv = documentState.webView {
+                    NSApp.keyWindow?.makeFirstResponder(wv)
+                }
+            }
+        })
     }
 
     private func reload() {
