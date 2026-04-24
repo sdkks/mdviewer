@@ -2,6 +2,28 @@ import SwiftUI
 
 // MARK: - About panel
 
+final class AboutWindowController: NSWindowController {
+    private static var shared: AboutWindowController?
+
+    static func show() {
+        if shared == nil {
+            let window = NSWindow(
+                contentRect: .zero,
+                styleMask: [.titled, .closable],
+                backing: .buffered,
+                defer: false
+            )
+            window.title = "About MDViewer"
+            window.contentView = NSHostingView(rootView: AboutView())
+            window.isReleasedWhenClosed = false
+            window.center()
+            shared = AboutWindowController(window: window)
+        }
+        shared?.window?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: false)
+    }
+}
+
 struct AboutView: View {
     private let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
     private let build   = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "?"
@@ -125,17 +147,7 @@ struct MDViewerApp: App {
         .commands {
             CommandGroup(replacing: .appInfo) {
                 Button("About MDViewer") {
-                    let window = NSWindow(
-                        contentRect: .zero,
-                        styleMask: [.titled, .closable],
-                        backing: .buffered,
-                        defer: false
-                    )
-                    window.title = "About MDViewer"
-                    window.contentView = NSHostingView(rootView: AboutView())
-                    window.center()
-                    window.makeKeyAndOrderFront(nil)
-                    NSApp.runModal(for: window)
+                    AboutWindowController.show()
                 }
             }
             MDViewerCommands()
