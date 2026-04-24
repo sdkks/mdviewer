@@ -56,15 +56,16 @@ final class FilePickerState: ObservableObject {
 
     func enumerateForCurrentInput() {
         enumerationTask?.cancel()
-        candidates = []
-        selectedIndex = nil
         let (directory, prefix) = resolvedDirectoryAndPrefix()
 
         enumerationTask = Task {
+            try? await Task.sleep(nanoseconds: 80_000_000) // 80ms debounce
+            guard !Task.isCancelled else { return }
+            self.candidates = []
+            self.selectedIndex = nil
             let results = await PathEnumerator.candidates(in: directory, prefix: prefix)
             guard !Task.isCancelled else { return }
             self.candidates = Array(results.prefix(100))
-            self.selectedIndex = nil
         }
     }
 
