@@ -32,7 +32,7 @@ enum PathEnumerator {
 
             // Apply prefix filter (empty prefix matches everything)
             if !prefix.isEmpty {
-                guard name.lowercased().hasPrefix(prefix.lowercased()) else { continue }
+                guard name.lowercased().contains(prefix.lowercased()) else { continue }
             }
 
             if isDir {
