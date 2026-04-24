@@ -12,8 +12,11 @@ A minimal macOS Markdown viewer. No editor, no bloat — just clean rendering wi
 
 - **GitHub-flavored rendering** via [marked.js](https://marked.js.org)
 - **Dark Mode** — automatic (system), light, or dark via View > Appearance
-- **Zoom** — Cmd+/Cmd- with persistent zoom level
-- **Reload** — Cmd+R to refresh after external edits
+- **Zoom** — `Cmd +` / `Cmd -` with persistent zoom level
+- **Reload** — `Cmd R` to refresh after external edits
+- **File navigation** — `Cmd ←` / `Cmd →` cycles through all `.md` files in the same directory, alphabetically (or by date modified — change in Sort By menu)
+- **In-document search** — `Cmd F` find bar with next/previous match and match count
+- **Quick open** — `Cmd K` floating file picker: type a path, Tab to complete directories, `../` to navigate up, results filtered to `.md` files only
 - **Native file handling** — Open, Recent Files, drag & drop
 - **< 500 KB total** — no Electron, no runtime, no dependencies
 
@@ -28,18 +31,20 @@ A minimal macOS Markdown viewer. No editor, no bloat — just clean rendering wi
 
 ## Install
 
-Download the latest `.app` from [Releases](https://github.com/trsdn/mdviewer/releases) or build from source:
+Download the latest `.app` from [Releases](https://github.com/sdkks/mdviewer/releases), unzip, and drag to `/Applications`.
 
-```bash
-brew install xcodegen
-xcodegen generate
-xcodebuild -scheme MDViewer -configuration Release build
-```
+> **First launch:** macOS may show "cannot be opened because the developer cannot be verified". Right-click the app and choose **Open** to bypass Gatekeeper. This is expected for unsigned open-source builds.
 
 ## Keyboard Shortcuts
 
 | Action | Shortcut |
 |--------|----------|
+| Previous file in directory | `Cmd ←` |
+| Next file in directory | `Cmd →` |
+| Find in document | `Cmd F` |
+| Find next match | `Cmd G` |
+| Find previous match | `Cmd Shift G` |
+| Quick open file | `Cmd K` |
 | Reload | `Cmd R` |
 | Zoom In | `Cmd +` |
 | Zoom Out | `Cmd -` |
@@ -47,6 +52,69 @@ xcodebuild -scheme MDViewer -configuration Release build
 | System Appearance | `Cmd Shift 0` |
 | Light Mode | `Cmd Shift 1` |
 | Dark Mode | `Cmd Shift 2` |
+
+## Quick Open (Cmd K)
+
+The file picker lets you jump to any `.md` file on your filesystem without leaving the keyboard:
+
+- Type a partial path or filename — results update as you type (substring match)
+- **Tab** — completes the current directory segment; appends `/` to drill in
+- **`../`** — navigates to the parent directory, just like a shell
+- **`../../`** — chains upward arbitrarily
+- **↑ / ↓** — move through the candidate list
+- **Return** — opens the selected file in a new window
+- **Escape** — closes the picker without navigating
+
+The picker anchors to the directory of the currently open file, or your home directory if no file is open.
+
+## Building from Source
+
+**Prerequisites:** Xcode 16+, Command Line Tools, [XcodeGen](https://github.com/yonaskolb/XcodeGen)
+
+```bash
+brew install xcodegen
+git clone https://github.com/sdkks/mdviewer
+cd mdviewer
+make build
+```
+
+`make build` runs `xcodegen generate` then builds a Release `.app` in Xcode's DerivedData.
+
+## Releasing
+
+### 1. Make a commit with a versioned prefix
+
+The version bump script reads the most recent commit message to decide which component to increment:
+
+| Commit prefix | Version bump |
+|---|---|
+| `Breaking:` | major (1.0.0 → 2.0.0) |
+| `Feature:` | minor (1.0.0 → 1.1.0) |
+| `Core:` | minor (1.0.0 → 1.1.0) |
+| `Fix:` | patch (1.0.0 → 1.0.1) |
+
+Example:
+```bash
+git commit -m "Feature: add table of contents sidebar"
+```
+
+### 2. Bump the version
+
+```bash
+make version-bump
+```
+
+This reads the last commit message, increments `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` in `project.yml`, regenerates the Xcode project, commits the change, and creates an annotated git tag (e.g. `v1.1.0`).
+
+### 3. Ship it
+
+**Prerequisites:** [`gh` CLI](https://cli.github.com) installed and authenticated, `GH_TOKEN` env var set with a fine-grained token scoped to `sdkks/mdviewer` with **Contents: read & write**.
+
+```bash
+make release
+```
+
+This pushes all commits and tags, builds a Release archive, zips `MDViewer.app`, creates a GitHub Release for the current tag, and uploads the zip as a release asset.
 
 ## Dependencies
 

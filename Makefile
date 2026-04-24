@@ -15,6 +15,7 @@ release:
 	$(eval VERSION := $(shell grep 'MARKETING_VERSION' project.yml | head -1 | sed 's/.*: *//;s/"//g;s/ //g'))
 	$(eval TAG := $(shell git describe --tags --exact-match 2>/dev/null || echo ""))
 	@test -n "$(TAG)" || { echo "No git tag on HEAD — run make version-bump or create a tag first"; exit 1; }
+	git push && git push --tags
 	xcodebuild archive \
 		-project MDViewer.xcodeproj \
 		-scheme MDViewer \
