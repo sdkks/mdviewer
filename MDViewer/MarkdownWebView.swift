@@ -3,36 +3,22 @@ import WebKit
 
 struct MarkdownWebView: NSViewRepresentable {
     let text: String
-    let appearanceMode: AppearanceMode
     let zoomLevel: Double
+    let theme: Theme
 
     func makeNSView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
         config.preferences.setValue(true, forKey: "developerExtrasEnabled")
 
         let webView = WKWebView(frame: .zero, configuration: config)
-        webView.setValue(false, forKey: "drawsBackground")
-        applyAppearance(to: webView)
         webView.pageZoom = zoomLevel
         loadContent(into: webView)
         return webView
     }
 
     func updateNSView(_ webView: WKWebView, context: Context) {
-        applyAppearance(to: webView)
         webView.pageZoom = zoomLevel
         loadContent(into: webView)
-    }
-
-    private func applyAppearance(to webView: WKWebView) {
-        switch appearanceMode {
-        case .system:
-            webView.appearance = nil
-        case .light:
-            webView.appearance = NSAppearance(named: .aqua)
-        case .dark:
-            webView.appearance = NSAppearance(named: .darkAqua)
-        }
     }
 
     private func loadContent(into webView: WKWebView) {
@@ -48,9 +34,14 @@ struct MarkdownWebView: NSViewRepresentable {
             .replacingOccurrences(of: "$", with: "\\$")
 
         html = html
+            .replacingOccurrences(of: "{{THEME_CSS}}", with: theme.colors.cssVariables())
             .replacingOccurrences(of: "{{MARKED_JS}}", with: markedJS)
             .replacingOccurrences(of: "{{MARKDOWN_CONTENT}}", with: escaped)
 
         webView.loadHTMLString(html, baseURL: templateURL.deletingLastPathComponent())
     }
+}
+
+#Preview {
+    MarkdownWebView(text: "# This is a test\n1. Test\n1. Test\n1. Test", zoomLevel: 1.0, theme: Theme.theme(for: "github-light", in: Theme.themes))
 }

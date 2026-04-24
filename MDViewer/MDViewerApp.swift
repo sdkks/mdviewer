@@ -22,6 +22,22 @@ enum AppearanceMode: String, CaseIterable {
 struct MDViewerApp: App {
     @AppStorage("appearanceMode") private var appearanceMode: String = AppearanceMode.system.rawValue
     @AppStorage("zoomLevel") private var zoomLevel: Double = 1.0
+    @AppStorage("lightThemeID") private var lightThemeID: String = "github-light"
+    @AppStorage("darkThemeID") private var darkThemeID: String = "github-dark"
+	
+	private func selectTheme() -> Theme {
+		let lightTheme = Theme.theme(for: lightThemeID, in: Theme.themes)
+		let darkTheme = Theme.theme(for: darkThemeID, in: Theme.themes)
+		switch AppearanceMode(rawValue: appearanceMode) {
+		case .light:
+			return lightTheme
+		case .dark:
+			return darkTheme
+		default:
+			let isDark = NSApp.effectiveAppearance.name == .darkAqua
+			return isDark ? darkTheme : lightTheme
+		}
+	}
 
     var body: some Scene {
         DocumentGroup(viewing: MarkdownDocument.self) { file in
@@ -29,7 +45,8 @@ struct MDViewerApp: App {
                 document: file.document,
                 fileURL: file.fileURL,
                 appearanceMode: AppearanceMode(rawValue: appearanceMode) ?? .system,
-                zoomLevel: zoomLevel
+                zoomLevel: zoomLevel,
+                theme: selectTheme(),
             )
         }
         .commands {
@@ -73,6 +90,14 @@ struct MDViewerApp: App {
                 }
             }
         }
+		
+		Settings {
+			PreferencesView(
+				lightThemeID: $lightThemeID,
+				darkThemeID: $darkThemeID
+			)
+		}
+		.restorationBehavior(.disabled)
     }
 
     private func shortcut(for mode: AppearanceMode) -> KeyboardShortcut {
