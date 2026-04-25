@@ -1,4 +1,4 @@
-.PHONY: build release version-bump
+.PHONY: build release version-bump tap-push
 
 build:
 	xcodegen generate
@@ -27,10 +27,31 @@ release:
 		-exportOptionsPlist ExportOptions.plist \
 		-exportPath build/export \
 		CODE_SIGNING_ALLOWED=NO
+	codesign --force --deep --sign - build/export/MDViewer.app
 	ditto -c -k --keepParent "build/export/MDViewer.app" "build/MDViewer-$(VERSION).zip"
 	gh release create $(TAG) --title "MDViewer $(VERSION)" --notes "" || true
 	gh release upload $(TAG) "build/MDViewer-$(VERSION).zip" --clobber
+	$(eval SHA256 := $(shell shasum -a 256 "build/MDViewer-$(VERSION).zip" | awk '{print $$1}'))
+	sed -i '' \
+		-e 's/version "[^"]*"/version "$(VERSION)"/' \
+		-e 's/sha256 "[^"]*"/sha256 "$(SHA256)"/' \
+		tap/Casks/mdviewer.rb
+	@echo "Updated tap/Casks/mdviewer.rb to version $(VERSION) sha256 $(SHA256)"
+	$(MAKE) tap-push VERSION=$(VERSION) TAG=$(TAG)
 	@echo "Released MDViewer $(VERSION) as $(TAG)"
+
+# Push updated cask to the homebrew tap repo at ../tap (git@github.com:sdkks/homebrew-tap.git).
+tap-push:
+	@test -d ../tap/.git || { \
+		echo "Tap repo not found at ../tap — clone it first: git clone git@github.com:sdkks/homebrew-tap.git ../tap"; \
+		exit 1; \
+	}
+	mkdir -p ../tap/Casks
+	cp tap/Casks/mdviewer.rb ../tap/Casks/mdviewer.rb
+	cd ../tap && \
+		git add Casks/mdviewer.rb && \
+		git diff --cached --quiet || git commit -m "mdviewer $(VERSION)" && \
+		git push
 
 version-bump:
 	@bash scripts/version-bump.sh
