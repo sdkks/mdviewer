@@ -33,15 +33,24 @@ A minimal macOS Markdown viewer. No editor, no bloat — just clean rendering wi
 
 ## Install
 
+### Homebrew (recommended)
+
+```bash
+brew tap sdkks/tap
+brew install --cask mdviewer
+```
+
+Gatekeeper is handled automatically — no extra steps needed.
+
+### Manual
+
 Download the latest `.app` from [Releases](https://github.com/sdkks/mdviewer/releases), unzip, and drag to `/Applications`.
 
-> **First launch — Gatekeeper:** macOS will block the app with a warning on first open. Run this once in Terminal, then double-click normally:
->
-> ```bash
-> xattr -dr com.apple.quarantine /Applications/MDViewer.app
-> ```
->
-> This is expected for unsigned open-source builds. On macOS 14 and earlier you can also right-click > Open instead. You could build from source if you prefer. Code is here and it is pretty straightforward.
+On first launch macOS will block the app because it is unsigned. Right-click > Open works, or run this once in Terminal:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/MDViewer.app
+```
 
 ## Keyboard Shortcuts
 
@@ -123,7 +132,9 @@ This reads the last commit message, increments `MARKETING_VERSION` and `CURRENT_
 make release
 ```
 
-This pushes all commits and tags, builds a Release archive, zips `MDViewer.app`, creates a GitHub Release for the current tag, and uploads the zip as a release asset.
+This pushes all commits and tags, builds a Release archive, ad-hoc signs `MDViewer.app`, zips it, creates a GitHub Release for the current tag, uploads the zip as a release asset, and updates the Homebrew cask in [`sdkks/homebrew-tap`](https://github.com/sdkks/homebrew-tap) automatically.
+
+**Prerequisites for tap push:** the tap repo must be checked out at `../tap` relative to this repo.
 
 ## Dependencies
 
