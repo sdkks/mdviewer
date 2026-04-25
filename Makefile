@@ -31,12 +31,12 @@ release:
 	ditto -c -k --keepParent "build/export/MDViewer.app" "build/MDViewer-$(VERSION).zip"
 	gh release create $(TAG) --title "MDViewer $(VERSION)" --notes "" || true
 	gh release upload $(TAG) "build/MDViewer-$(VERSION).zip" --clobber
-	$(eval SHA256 := $(shell shasum -a 256 "build/MDViewer-$(VERSION).zip" | awk '{print $$1}'))
+	@SHA256=$$(shasum -a 256 "build/MDViewer-$(VERSION).zip" | awk '{print $$1}'); \
 	sed -i '' \
 		-e 's/version "[^"]*"/version "$(VERSION)"/' \
-		-e 's/sha256 "[^"]*"/sha256 "$(SHA256)"/' \
-		tap/Casks/mdviewer.rb
-	@echo "Updated tap/Casks/mdviewer.rb to version $(VERSION) sha256 $(SHA256)"
+		-e "s/sha256 \"[^\"]*\"/sha256 \"$$SHA256\"/" \
+		tap/Casks/mdviewer.rb; \
+	echo "Updated tap/Casks/mdviewer.rb to version $(VERSION) sha256 $$SHA256"
 	$(MAKE) tap-push VERSION=$(VERSION) TAG=$(TAG)
 	@echo "Released MDViewer $(VERSION) as $(TAG)"
 
