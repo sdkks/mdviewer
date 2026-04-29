@@ -1,4 +1,7 @@
-.PHONY: build release version-bump tap-push
+.PHONY: build release version-bump tap-push setup
+
+setup:
+	git config core.hooksPath .githooks
 
 build:
 	xcodegen generate
@@ -40,15 +43,16 @@ release:
 	$(MAKE) tap-push VERSION=$(VERSION) TAG=$(TAG)
 	@echo "Released MDViewer $(VERSION) as $(TAG)"
 
-# Push updated cask to the homebrew tap repo at ../tap (git@github.com:sdkks/homebrew-tap.git).
+# Push updated cask to the homebrew tap repo at ../homebrew-tap (git@github.com:sdkks/homebrew-tap.git).
 tap-push:
-	@test -d ../tap/.git || { \
-		echo "Tap repo not found at ../tap — clone it first: git clone git@github.com:sdkks/homebrew-tap.git ../tap"; \
+	@test -d ../homebrew-tap/.git || { \
+		echo "Tap repo not found at ../homebrew-tap — clone it first: git clone git@github.com:sdkks/homebrew-tap.git ../homebrew-tap"; \
 		exit 1; \
 	}
-	mkdir -p ../tap/Casks
-	cp tap/Casks/mdviewer.rb ../tap/Casks/mdviewer.rb
-	cd ../tap && \
+	mkdir -p ../homebrew-tap/Casks
+	cp tap/Casks/mdviewer.rb ../homebrew-tap/Casks/mdviewer.rb
+	cd ../homebrew-tap && \
+		git pull --rebase && \
 		git add Casks/mdviewer.rb && \
 		git diff --cached --quiet || git commit -m "mdviewer $(VERSION)" && \
 		git push
