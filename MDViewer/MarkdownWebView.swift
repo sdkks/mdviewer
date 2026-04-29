@@ -1,6 +1,40 @@
 import SwiftUI
 import WebKit
 
+// Extracted for testability: given a URL and WKNavigationType, return the navigation
+// policy and (if the URL should open externally) the URL to open in the OS browser.
+// Returns (.cancel, url) when the link should open externally,
+// (.allow, nil) when the navigation should proceed inside WKWebView (initial load),
+// and (.cancel, nil) for any other navigation that should be blocked.
+func linkNavigationPolicy(
+    for url: URL?,
+    navigationType: WKNavigationType
+) -> (WKNavigationActionPolicy, URL?) {
+    switch navigationType {
+    case .linkActivated:
+        // Open http/https and mailto/tel links externally via the OS.
+        // file:// links are intentionally blocked: untrusted Markdown should not be
+        // able to open arbitrary local paths in the OS (security boundary).
+        // All other unrecognised schemes are blocked by default.
+        if let url, let scheme = url.scheme {
+            switch scheme {
+            case "http", "https", "mailto", "tel":
+                return (.cancel, url)
+            default:
+                return (.cancel, nil)
+            }
+        }
+        return (.cancel, nil)
+    case .other:
+        // Allow the initial loadHTMLString navigation. Note: .other is also triggered
+        // by JS-initiated navigations and iframes; this is acceptable here only because
+        // the current template.html contains no JS redirects or iframes.
+        return (.allow, nil)
+    default:
+        return (.cancel, nil)
+    }
+}
+
 struct MarkdownWebView: NSViewRepresentable {
     let text: String
     let zoomLevel: Double
@@ -10,6 +44,21 @@ struct MarkdownWebView: NSViewRepresentable {
     class Coordinator: NSObject, WKNavigationDelegate {
         var lastRenderedText: String?
         var lastRenderedTheme: String?
+
+        func webView(
+            _ webView: WKWebView,
+            decidePolicyFor navigationAction: WKNavigationAction,
+            decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
+        ) {
+            let (policy, externalURL) = linkNavigationPolicy(
+                for: navigationAction.request.url,
+                navigationType: navigationAction.navigationType
+            )
+            if let externalURL {
+                NSWorkspace.shared.open(externalURL)
+            }
+            decisionHandler(policy)
+        }
     }
 
     func makeCoordinator() -> Coordinator {

@@ -22,3 +22,17 @@ targets:
         SWIFT_VERSION: "5.9"
         MACOSX_DEPLOYMENT_TARGET: "13.0"
         CODE_SIGN_STYLE: Automatic
+  MDViewerTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - MDViewerTests
+    dependencies:
+      - target: MDViewer
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.torstenmahr.MDViewerTests
+        SWIFT_VERSION: "5.9"
+        MACOSX_DEPLOYMENT_TARGET: "13.0"
+        CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: true
