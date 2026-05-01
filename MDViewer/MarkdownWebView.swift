@@ -96,8 +96,10 @@ struct MarkdownWebView: NSViewRepresentable {
     private func loadContent(into webView: WKWebView) {
         guard let templateURL = Bundle.main.url(forResource: "template", withExtension: "html"),
               let markedURL = Bundle.main.url(forResource: "marked.min", withExtension: "js"),
+              let mermaidURL = Bundle.main.url(forResource: "mermaid.min", withExtension: "js"),
               var html = try? String(contentsOf: templateURL, encoding: .utf8),
-              let markedJS = try? String(contentsOf: markedURL, encoding: .utf8)
+              let markedJS = try? String(contentsOf: markedURL, encoding: .utf8),
+              let mermaidJS = try? String(contentsOf: mermaidURL, encoding: .utf8)
         else { return }
 
         let escaped = text
@@ -108,6 +110,8 @@ struct MarkdownWebView: NSViewRepresentable {
         html = html
             .replacingOccurrences(of: "{{THEME_CSS}}", with: theme.colors.cssVariables())
             .replacingOccurrences(of: "{{MARKED_JS}}", with: markedJS)
+            .replacingOccurrences(of: "{{MERMAID_JS}}", with: mermaidJS)
+            .replacingOccurrences(of: "{{THEME_ID}}", with: theme.id)
             .replacingOccurrences(of: "{{MARKDOWN_CONTENT}}", with: escaped)
 
         webView.loadHTMLString(html, baseURL: templateURL.deletingLastPathComponent())

@@ -62,6 +62,15 @@ pre code {
     font-size: 85%;
 }
 
+/* Mermaid diagrams: reset pre styling so SVG renders cleanly */
+pre.mermaid {
+    background: none;
+    border-radius: 0;
+    padding: 0;
+    overflow: visible;
+    text-align: center;
+}
+
 blockquote {
     margin: 0 0 16px 0;
     padding: 0 1em;
@@ -111,11 +120,40 @@ input[type="checkbox"] { margin-right: 0.5em; }
 <body>
 <div id="content"></div>
 <script>{{MARKED_JS}}</script>
+<script>{{MERMAID_JS}}</script>
 <script>
     // Content is from local user files rendered in a sandboxed WKWebView
+
+    // Map mdviewer theme id → mermaid theme name
+    const MERMAID_THEME_MAP = {
+        'github-light':    'default',
+        'solarized-light': 'default',
+        'github-dark':     'dark',
+        'dracula':         'dark',
+        'solarized-dark':  'dark',
+        'monokai':         'dark',
+        'nord':            'dark',
+    };
+    const themeId = '{{THEME_ID}}';
+    const mermaidTheme = MERMAID_THEME_MAP[themeId] || 'default';
+
+    mermaid.initialize({ startOnLoad: false, theme: mermaidTheme });
+
+    // Override marked renderer: emit <pre class="mermaid"> for mermaid fences
+    marked.use({
+        renderer: {
+            code({ text, lang }) {
+                if (lang === 'mermaid') {
+                    return `<pre class="mermaid">${text}</pre>`;
+                }
+                return false;
+            }
+        }
+    });
+
     const md = `{{MARKDOWN_CONTENT}}`;
-    const rendered = marked.parse(md);
-    document.getElementById('content').innerHTML = rendered;
+    document.getElementById('content').innerHTML = marked.parse(md);
+    mermaid.run();
 </script>
 </body>
 </html>
