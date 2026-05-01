@@ -5,12 +5,13 @@ A minimal macOS Markdown viewer. No editor, no bloat — just clean rendering wi
 ![macOS](https://img.shields.io/badge/macOS-13.0+-black?logo=apple)
 ![Swift](https://img.shields.io/badge/Swift-5.9-F05138?logo=swift&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-blue)
-![Size](https://img.shields.io/badge/App_Size-<500KB-2ea44f)
+![Size](https://img.shields.io/badge/App_Size-~4MB-2ea44f)
 ![Memory](https://img.shields.io/badge/Memory-<100MB-2ea44f)
 
 ## Features
 
 - **GitHub-flavored rendering** via [marked.js](https://marked.js.org)
+- **Mermaid diagrams** — fenced ` ```mermaid ` blocks render natively as SVG
 - **Dark Mode** — automatic (system), light, or dark via View > Appearance
 - **Zoom** — `Cmd +` / `Cmd -` with persistent zoom level
 - **Reload** — `Cmd R` to refresh after external edits
@@ -18,17 +19,17 @@ A minimal macOS Markdown viewer. No editor, no bloat — just clean rendering wi
 - **In-document search** — `Cmd F` find bar with next/previous match and match count
 - **Quick open** — `Cmd K` floating file picker: type a path, Tab to complete directories, `../` to navigate up, results filtered to `.md` files only
 - **Native file handling** — Open, Recent Files, drag & drop
-- **< 500 KB total** — no Electron, no runtime, no dependencies
+- **No Electron, no runtime** — native macOS app
 
 ![MD Viewer V2 DEMO GIF](./docs/mdviewer-v2-demo.gif)
 
 ## Performance
 
-| Metric         | Value    |
-| -------------- | -------- |
-| App size       | < 500 KB |
-| Download (zip) | < 150 KB |
-| Cold start     | < 50 ms  |
+| Metric         | Value   |
+| -------------- | ------- |
+| App size       | ~ 4 MB  |
+| Download (zip) | ~ 1 MB  |
+| Cold start     | < 50 ms |
 | Memory         | < 100 MB |
 
 ## Install
@@ -138,9 +139,10 @@ This pushes all commits and tags, builds a Release archive, ad-hoc signs `MDView
 
 ## Dependencies
 
-| Library                                      | Version | License | Purpose                 |
-| -------------------------------------------- | ------- | ------- | ----------------------- |
-| [marked](https://github.com/markedjs/marked) | 15.0.7  | MIT     | Markdown → HTML parsing |
+| Library                                          | Version | License | Purpose                      |
+| ------------------------------------------------ | ------- | ------- | ---------------------------- |
+| [marked](https://github.com/markedjs/marked)     | 15.0.7  | MIT     | Markdown → HTML parsing      |
+| [mermaid](https://github.com/mermaid-js/mermaid) | 11      | MIT     | Diagram rendering (SVG)      |
 
 No Swift package dependencies. No external frameworks.
 
