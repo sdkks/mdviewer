@@ -15,8 +15,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.torstenmahr.MDViewer
         PRODUCT_NAME: MDViewer
-        MARKETING_VERSION: "2.1.0"
-        CURRENT_PROJECT_VERSION: "7"
+        MARKETING_VERSION: "2.2.0"
+        CURRENT_PROJECT_VERSION: "8"
         INFOPLIST_FILE: MDViewer/Info.plist
         GENERATE_INFOPLIST_FILE: false
         SWIFT_VERSION: "5.9"
