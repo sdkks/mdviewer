@@ -1,6 +1,28 @@
 import XCTest
+import AppKit
 import WebKit
 @testable import MDViewer
+
+final class DocumentStateRevealTests: XCTestCase {
+
+    func testRevealInFinder_withCurrentURL_callsWorkspace() {
+        let state = DocumentState()
+        // Use the app bundle path as a known-existing URL — it's always present
+        let url = Bundle.main.bundleURL
+        state.load(url: url)
+
+        // We can't assert NSWorkspace was actually called (no mocking in this project),
+        // but we verify the method doesn't crash and currentURL is set.
+        XCTAssertNotNil(state.currentURL)
+        state.revealInFinder() // exercises the path
+    }
+
+    func testRevealInFinder_withNoCurrentURL_isNoop() {
+        let state = DocumentState()
+        XCTAssertNil(state.currentURL)
+        state.revealInFinder() // should not crash
+    }
+}
 
 final class LinkNavigationPolicyTests: XCTestCase {
 

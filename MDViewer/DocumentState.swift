@@ -148,6 +148,11 @@ final class DocumentState: ObservableObject {
         }
     }
 
+    func revealInFinder() {
+        guard let url = currentURL else { return }
+        NSWorkspace.shared.activateFileViewerSelecting([url])
+    }
+
     func dismissFind() {
         showFindBar = false
         findMatchFound = nil

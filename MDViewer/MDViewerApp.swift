@@ -84,6 +84,14 @@ struct MDViewerCommands: Commands {
             }
             .keyboardShortcut(.rightArrow, modifiers: .command)
             .disabled(documentState == nil)
+
+            Divider()
+
+            Button("Reveal in Finder") {
+                documentState?.revealInFinder()
+            }
+            .keyboardShortcut("r", modifiers: [.command, .option])
+            .disabled(documentState?.currentURL == nil)
         }
 
         CommandMenu("Sort By") {
