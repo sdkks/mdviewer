@@ -63,22 +63,23 @@ final class DocumentState: ObservableObject {
     }
 
     func scrollToAnchor(_ anchor: String) {
+        // Use location.hash for reliable anchor scrolling in WKWebView.
+        // scrollIntoView is unreliable inside loadHTMLString-backed views.
         let escaped = anchor
             .replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "'", with: "\\'")
+            .replacingOccurrences(of: "\"", with: "\\\"")
         let js = """
             (function() {
                 var el = document.getElementById('\(escaped)');
-                if (el) {
-                    el.scrollIntoView({behavior:'instant'});
-                    return 'ok';
-                }
-                return 'not found';
+                if (!el) return 'not found';
+                location.hash = '#\(escaped)';
+                return 'ok';
             })()
             """
-        webView?.evaluateJavaScript(js) { result, _ in
+        webView?.evaluateJavaScript(js) { result, error in
             if result as? String != "ok" {
-                NSLog("scrollToAnchor: element not found for id '%@'", anchor)
+                NSLog("scrollToAnchor failed for '%@': %@", anchor, String(describing: error))
             }
         }
     }
