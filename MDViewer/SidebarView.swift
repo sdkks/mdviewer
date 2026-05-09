@@ -160,7 +160,7 @@ struct SidebarView: View {
                     .font(.system(size: 12))
                     .lineLimit(1)
                     .truncationMode(.tail)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.primary)
                     .padding(.leading, 8)
                     .padding(.vertical, 1)
 
@@ -194,7 +194,7 @@ struct SidebarView: View {
                     .font(.system(size: 11))
                     .lineLimit(1)
                     .truncationMode(.tail)
-                    .foregroundColor(.secondary.opacity(0.8))
+                    .foregroundColor(.primary.opacity(0.75))
                     .padding(.leading, 8)
                     .padding(.vertical, 1)
 
