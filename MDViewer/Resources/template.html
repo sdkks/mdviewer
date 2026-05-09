@@ -282,6 +282,20 @@ a:focus-visible, pre.mermaid:focus-visible {
     const md = `{{MARKDOWN_CONTENT}}`;
     document.getElementById('content').innerHTML = marked.parse(md);
 
+    // Ensure all headers have anchor IDs for sidebar navigation
+    (function() {
+        function slugify(text) {
+            return text.toLowerCase().trim()
+                .replace(/\s+/g, '-')
+                .replace(/[^a-z0-9-]/g, '');
+        }
+        document.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach(function(el) {
+            if (!el.id) {
+                el.id = slugify(el.textContent || '');
+            }
+        });
+    })();
+
     const fitDiagrams = {{FIT_DIAGRAMS}};
 
     (async function() {
