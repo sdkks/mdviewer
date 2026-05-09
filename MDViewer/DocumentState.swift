@@ -66,8 +66,21 @@ final class DocumentState: ObservableObject {
         let escaped = anchor
             .replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "'", with: "\\'")
-        let js = "document.getElementById('\(escaped)')?.scrollIntoView({behavior:'instant'})"
-        webView?.evaluateJavaScript(js, completionHandler: nil)
+        let js = """
+            (function() {
+                var el = document.getElementById('\(escaped)');
+                if (el) {
+                    el.scrollIntoView({behavior:'instant'});
+                    return 'ok';
+                }
+                return 'not found';
+            })()
+            """
+        webView?.evaluateJavaScript(js) { result, _ in
+            if result as? String != "ok" {
+                NSLog("scrollToAnchor: element not found for id '%@'", anchor)
+            }
+        }
     }
 
     func attemptPendingScroll() {
@@ -139,8 +152,10 @@ final class DocumentState: ObservableObject {
     }
 
     private static func slugify(_ text: String) -> String {
+        // Match JS slugify: lowercase, trim, collapse spaces to '-', strip non-alphanumeric
         text.lowercased()
-            .replacingOccurrences(of: " ", with: "-")
+            .trimmingCharacters(in: .whitespaces)
+            .replacingOccurrences(of: "[\\s]+", with: "-", options: .regularExpression)
             .replacingOccurrences(of: "[^a-z0-9-]", with: "", options: .regularExpression)
     }
 

@@ -449,14 +449,20 @@ a:focus-visible, pre.mermaid:focus-visible {
 
         // Notify Swift of the current document's H1/H2 header outline
         if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.mermaidH1Headers) {
+            function slugify(text) {
+                return text.toLowerCase().trim()
+                    .replace(/\s+/g, '-')
+                    .replace(/[^a-z0-9-]/g, '');
+            }
             const headers = [];
             let currentH1 = null;
             document.querySelectorAll('h1, h2').forEach(function(el) {
+                var id = el.id || slugify(el.textContent || '');
                 if (el.tagName === 'H1') {
-                    currentH1 = {text: el.textContent || '', id: el.id || '', h2s: []};
+                    currentH1 = {text: el.textContent || '', id: id, h2s: []};
                     headers.push(currentH1);
                 } else if (el.tagName === 'H2' && currentH1) {
-                    currentH1.h2s.push({text: el.textContent || '', id: el.id || ''});
+                    currentH1.h2s.push({text: el.textContent || '', id: id});
                 }
             });
             window.webkit.messageHandlers.mermaidH1Headers.postMessage(headers);
