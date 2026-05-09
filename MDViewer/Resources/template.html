@@ -486,37 +486,52 @@ a:focus-visible, pre.mermaid:focus-visible {
         });
     };
 
-    // Render each diagram to a canvas and return base64 PNG data URLs.
-    // Returns a Promise that resolves to an array of {index, png} objects.
-    window.exportMermaidPNGs = function() {
+    // Async PNG export — renders each diagram to canvas and posts results back
+    // to Swift via window.webkit.messageHandlers.mermaidPNGExport.
+    window.startMermaidPNGExport = function() {
         const diagrams = document.querySelectorAll('pre.mermaid svg');
         const scale = window.devicePixelRatio || 2;
-        const promises = Array.from(diagrams).map(function(svg, index) {
-            return new Promise(function(resolve) {
-                const rect = svg.getBoundingClientRect();
-                const canvas = document.createElement('canvas');
-                canvas.width = Math.max(1, Math.ceil(rect.width * scale));
-                canvas.height = Math.max(1, Math.ceil(rect.height * scale));
-                const ctx = canvas.getContext('2d');
-                ctx.scale(scale, scale);
+        const results = [];
+        let completed = 0;
 
-                const svgString = inlineSVGStyles(svg);
-                const blob = new Blob([svgString], {type: 'image/svg+xml;charset=utf-8'});
-                const url = URL.createObjectURL(blob);
-                const img = new Image();
-                img.onload = function() {
-                    ctx.drawImage(img, 0, 0, rect.width, rect.height);
-                    URL.revokeObjectURL(url);
-                    resolve({ index: index, png: canvas.toDataURL('image/png') });
-                };
-                img.onerror = function() {
-                    URL.revokeObjectURL(url);
-                    resolve({ index: index, png: '' });
-                };
-                img.src = url;
-            });
+        if (diagrams.length === 0) {
+            window.webkit.messageHandlers.mermaidPNGExport.postMessage({diagrams: []});
+            return;
+        }
+
+        function checkDone() {
+            completed++;
+            if (completed === diagrams.length) {
+                results.sort(function(a, b) { return a.index - b.index; });
+                window.webkit.messageHandlers.mermaidPNGExport.postMessage({diagrams: results});
+            }
+        }
+
+        Array.from(diagrams).forEach(function(svg, index) {
+            const rect = svg.getBoundingClientRect();
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.max(1, Math.ceil(rect.width * scale));
+            canvas.height = Math.max(1, Math.ceil(rect.height * scale));
+            const ctx = canvas.getContext('2d');
+            ctx.scale(scale, scale);
+
+            const svgString = inlineSVGStyles(svg);
+            const blob = new Blob([svgString], {type: 'image/svg+xml;charset=utf-8'});
+            const url = URL.createObjectURL(blob);
+            const img = new Image();
+            img.onload = function() {
+                ctx.drawImage(img, 0, 0, rect.width, rect.height);
+                URL.revokeObjectURL(url);
+                results.push({index: index, png: canvas.toDataURL('image/png')});
+                checkDone();
+            };
+            img.onerror = function() {
+                URL.revokeObjectURL(url);
+                results.push({index: index, png: ''});
+                checkDone();
+            };
+            img.src = url;
         });
-        return Promise.all(promises);
     };
 </script>
 </body>

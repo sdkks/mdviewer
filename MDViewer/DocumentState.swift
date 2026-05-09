@@ -194,21 +194,40 @@ final class DocumentState: ObservableObject {
             presentExportAlert(message: "No web view available.")
             return
         }
-        let js = format == .png ? "window.exportMermaidPNGs()" : "window.exportMermaidSVGs()"
-        webView.evaluateJavaScript(js) { [weak self] result, error in
-            DispatchQueue.main.async {
-                guard let self = self else { return }
-                if let error = error {
-                    self.presentExportAlert(message: "Failed to extract diagrams: \(error.localizedDescription)")
-                    return
+        if format == .png {
+            // PNG export is async — JS posts results back via mermaidPNGExport message handler.
+            webView.evaluateJavaScript("window.startMermaidPNGExport()") { [weak self] _, error in
+                DispatchQueue.main.async {
+                    if let error = error {
+                        self?.presentExportAlert(message: "Failed to start PNG export: \(error.localizedDescription)")
+                    }
                 }
-                guard let diagrams = result as? [[String: Any]], !diagrams.isEmpty else {
-                    self.presentExportAlert(message: "No Mermaid diagrams found in this document.")
-                    return
+            }
+        } else {
+            // SVG export is synchronous — JS returns an array of SVG strings.
+            webView.evaluateJavaScript("window.exportMermaidSVGs()") { [weak self] result, error in
+                DispatchQueue.main.async {
+                    guard let self = self else { return }
+                    if let error = error {
+                        self.presentExportAlert(message: "Failed to extract diagrams: \(error.localizedDescription)")
+                        return
+                    }
+                    guard let diagrams = result as? [[String: Any]], !diagrams.isEmpty else {
+                        self.presentExportAlert(message: "No Mermaid diagrams found in this document.")
+                        return
+                    }
+                    self.exportDiagramsAsZip(diagrams: diagrams, format: format)
                 }
-                self.exportDiagramsAsZip(diagrams: diagrams, format: format)
             }
         }
+    }
+
+    func completePNGExport(diagrams: [[String: Any]]) {
+        guard !diagrams.isEmpty else {
+            presentExportAlert(message: "No Mermaid diagrams found in this document.")
+            return
+        }
+        exportDiagramsAsZip(diagrams: diagrams, format: .png)
     }
 
     private func exportDiagramsAsZip(diagrams: [[String: Any]], format: ExportFormat) {

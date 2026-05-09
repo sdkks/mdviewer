@@ -63,9 +63,17 @@ struct MarkdownWebView: NSViewRepresentable {
             _ userContentController: WKUserContentController,
             didReceive message: WKScriptMessage
         ) {
-            guard message.name == "mermaidCount",
-                  let count = message.body as? Int else { return }
-            documentState?.mermaidDiagramCount = count
+            switch message.name {
+            case "mermaidCount":
+                guard let count = message.body as? Int else { return }
+                documentState?.mermaidDiagramCount = count
+            case "mermaidPNGExport":
+                guard let dict = message.body as? [String: Any],
+                      let diagrams = dict["diagrams"] as? [[String: Any]] else { return }
+                documentState?.completePNGExport(diagrams: diagrams)
+            default:
+                break
+            }
         }
 
         func webView(
@@ -123,6 +131,7 @@ struct MarkdownWebView: NSViewRepresentable {
         context.coordinator.documentState = documentState
         context.coordinator.baseDirectory = baseDirectory
         config.userContentController.add(context.coordinator, name: "mermaidCount")
+        config.userContentController.add(context.coordinator, name: "mermaidPNGExport")
 
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
