@@ -48,12 +48,15 @@ struct SidebarView: View {
                     emptyState(message: "No Markdown files in this folder.")
                 }
             } else {
-                List {
-                    ForEach(rowItems, id: \.id) { item in
-                        rowView(for: item)
+                ScrollView(.vertical, showsIndicators: true) {
+                    VStack(spacing: 0) {
+                        ForEach(rowItems, id: \.id) { item in
+                            rowView(for: item)
+                        }
                     }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
                 }
-                .listStyle(.plain)
             }
         }
     }
