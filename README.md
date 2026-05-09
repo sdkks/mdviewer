@@ -5,17 +5,22 @@ A minimal macOS Markdown viewer. No editor, no bloat — just clean rendering wi
 ![macOS](https://img.shields.io/badge/macOS-13.0+-black?logo=apple)
 ![Swift](https://img.shields.io/badge/Swift-5.9-F05138?logo=swift&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-blue)
-![Size](https://img.shields.io/badge/App_Size-~4MB-2ea44f)
+![Size](https://img.shields.io/badge/App_Size-~4.5MB-2ea44f)
 ![Memory](https://img.shields.io/badge/Memory-<100MB-2ea44f)
 
 ## Features
 
 - **GitHub-flavored rendering** via [marked.js](https://marked.js.org)
-- **Mermaid diagrams** — fenced ` ```mermaid ` blocks render natively as SVG
+- **Syntax highlighting** — code blocks auto-detected and highlighted via [highlight.js](https://highlightjs.org)
+- **Mermaid diagrams** — fenced ` ```mermaid ` blocks render natively as SVG with zoom, pan, and keyboard controls
+- **Diagram export** — save any Mermaid diagram as SVG or PNG (File → Export Mermaid Diagram)
 - **Dark Mode** — automatic (system), light, or dark via View > Appearance
 - **Zoom** — `Cmd +` / `Cmd -` with persistent zoom level
 - **Reload** — `Cmd R` to refresh after external edits
+- **Sidebar** — browse all `.md` files in the current directory with `Cmd Shift S` or `Cmd B`
 - **File navigation** — `Cmd ←` / `Cmd →` cycles through all `.md` files in the same directory, alphabetically (or by date modified — change in Sort By menu)
+- **Internal links** — click links between `.md` files to navigate within MDViewer
+- **Footnotes** — GitHub-style footnotes rendered and linked automatically
 - **In-document search** — `Cmd F` find bar with next/previous match and match count
 - **Quick open** — `Cmd K` floating file picker: type a path, Tab to complete directories, `../` to navigate up, results filtered to `.md` files only
 - **Native file handling** — Open, Recent Files, drag & drop
@@ -25,11 +30,11 @@ A minimal macOS Markdown viewer. No editor, no bloat — just clean rendering wi
 
 ## Performance
 
-| Metric         | Value   |
-| -------------- | ------- |
-| App size       | ~ 4 MB  |
-| Download (zip) | ~ 1 MB  |
-| Cold start     | < 50 ms |
+| Metric         | Value    |
+| -------------- | -------- |
+| App size       | ~ 4.5 MB |
+| Download (zip) | ~ 1.3 MB |
+| Cold start     | < 50 ms  |
 | Memory         | < 100 MB |
 
 ## Install
@@ -55,21 +60,23 @@ xattr -dr com.apple.quarantine /Applications/MDViewer.app
 
 ## Keyboard Shortcuts
 
-| Action                     | Shortcut      |
-| -------------------------- | ------------- |
-| Previous file in directory | `Cmd ←`       |
-| Next file in directory     | `Cmd →`       |
-| Find in document           | `Cmd F`       |
-| Find next match            | `Cmd G`       |
-| Find previous match        | `Cmd Shift G` |
-| Quick open file            | `Cmd K`       |
-| Reload                     | `Cmd R`       |
-| Zoom In                    | `Cmd +`       |
-| Zoom Out                   | `Cmd -`       |
-| Actual Size                | `Cmd 0`       |
-| System Appearance          | `Cmd Shift 0` |
-| Light Mode                 | `Cmd Shift 1` |
-| Dark Mode                  | `Cmd Shift 2` |
+| Action                     | Shortcut       |
+| -------------------------- | -------------- |
+| Previous file in directory | `Cmd ←`        |
+| Next file in directory     | `Cmd →`        |
+| Toggle sidebar             | `Cmd Shift S`  |
+| Toggle sidebar (alt)       | `Cmd B`        |
+| Find in document           | `Cmd F`        |
+| Find next match            | `Cmd G`        |
+| Find previous match        | `Cmd Shift G`  |
+| Quick open file            | `Cmd K`        |
+| Reload                     | `Cmd R`        |
+| Zoom In                    | `Cmd +`        |
+| Zoom Out                   | `Cmd -`        |
+| Actual Size                | `Cmd 0`        |
+| System Appearance          | `Cmd Shift 0`  |
+| Light Mode                 | `Cmd Shift 1`  |
+| Dark Mode                  | `Cmd Shift 2`  |
 
 ## Quick Open (Cmd K)
 
@@ -84,6 +91,29 @@ The file picker lets you jump to any `.md` file on your filesystem without leavi
 - **Escape** — closes the picker without navigating
 
 The picker anchors to the directory of the currently open file, or your home directory if no file is open.
+
+## Sidebar
+
+The sidebar (`Cmd Shift S` or `Cmd B`) shows every Markdown file in the same directory as the current document. Click any file to open it instantly.
+
+- **Sort order** — alphabetical (default) or by date modified, via View → Sort By
+- **Live sync** — changes made in other apps (new files, renames, deletes) appear automatically
+- **Selection follows** — the currently open file is always highlighted
+- **Persistence** — sidebar visibility is remembered across launches (toggle in Preferences)
+
+## Mermaid Diagrams
+
+Fenced ` ```mermaid ` blocks render as interactive SVG diagrams:
+
+- **Zoom & pan** — click and drag to pan; hold `Cmd` (or `Ctrl`) and scroll to zoom
+- **Keyboard controls** — focus a diagram (click or Tab) and use:
+  - `+` / `-` — zoom in/out
+  - Arrow keys — pan
+  - `0` — fit to view
+  - `Escape` — reset zoom and pan
+- **Fit to view** — diagrams scale to the window width automatically (toggle in View → Fit Diagrams to View)
+- **Export** — File → Export Mermaid Diagram → SVG or PNG saves all diagrams in the current document
+- **Error diagnostics** — syntax errors show an inline error message with the problematic source line highlighted
 
 ## Building from Source
 
@@ -135,14 +165,17 @@ make release
 
 This pushes all commits and tags, builds a Release archive, ad-hoc signs `MDViewer.app`, zips it, creates a GitHub Release for the current tag, uploads the zip as a release asset, and updates the Homebrew cask in [`sdkks/homebrew-tap`](https://github.com/sdkks/homebrew-tap) automatically.
 
-**Prerequisites for tap push:** the tap repo must be checked out at `../tap` relative to this repo.
+**Prerequisites for tap push:** the tap repo must be checked out at `../homebrew-tap` relative to this repo.
 
 ## Dependencies
 
-| Library                                          | Version | License | Purpose                      |
-| ------------------------------------------------ | ------- | ------- | ---------------------------- |
-| [marked](https://github.com/markedjs/marked)     | 15.0.7  | MIT     | Markdown → HTML parsing      |
-| [mermaid](https://github.com/mermaid-js/mermaid) | 11      | MIT     | Diagram rendering (SVG)      |
+| Library                                                          | Version | License | Purpose                      |
+| ---------------------------------------------------------------- | ------- | ------- | ---------------------------- |
+| [marked](https://github.com/markedjs/marked)                     | 15.0.7  | MIT     | Markdown → HTML parsing      |
+| [mermaid](https://github.com/mermaid-js/mermaid)                 | ~11.5   | MIT     | Diagram rendering (SVG)      |
+| [highlight.js](https://github.com/highlightjs/highlight.js)      | ~11.9   | BSD-3   | Syntax highlighting          |
+| [svg-pan-zoom](https://github.com/bumbu/svg-pan-zoom)            | ~3.6    | BSD-2   | Diagram zoom & pan           |
+| [marked-footnote](https://github.com/bent10/marked-extensions)   | —       | MIT     | Footnote support             |
 
 No Swift package dependencies. No external frameworks.
 
