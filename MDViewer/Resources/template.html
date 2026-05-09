@@ -448,17 +448,44 @@ a:focus-visible, pre.mermaid:focus-visible {
         }
     })();
 
+    // Inline computed CSS styles into an SVG clone so it renders correctly
+    // outside the browser (e.g. macOS NSImage, image editors).
+    function inlineSVGStyles(svg) {
+        const clone = svg.cloneNode(true);
+        const elements = clone.querySelectorAll('*');
+        elements.forEach(function(el) {
+            const computed = window.getComputedStyle(el);
+            const props = ['fill', 'stroke', 'color', 'font-family', 'font-size',
+                           'font-weight', 'text-anchor', 'dominant-baseline',
+                           'stroke-width', 'stroke-dasharray'];
+            let inline = el.getAttribute('style') || '';
+            props.forEach(function(prop) {
+                const val = computed.getPropertyValue(prop);
+                if (val && val !== 'none' && val !== 'auto' && val !== 'normal' &&
+                    !inline.includes(prop + ':')) {
+                    inline += (inline ? '; ' : '') + prop + ': ' + val;
+                }
+            });
+            if (inline) el.setAttribute('style', inline);
+        });
+        if (!clone.getAttribute('xmlns')) {
+            clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+        }
+        // Ensure explicit dimensions so external renderers know the viewport
+        const rect = svg.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+            clone.setAttribute('width', rect.width);
+            clone.setAttribute('height', rect.height);
+        }
+        return new XMLSerializer().serializeToString(clone);
+    }
+
     window.exportMermaidSVGs = function() {
         const diagrams = document.querySelectorAll('pre.mermaid svg');
-        return Array.from(diagrams).map((svg, index) => {
-            const clone = svg.cloneNode(true);
-            if (!clone.getAttribute('xmlns')) {
-                clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-            }
-            const serializer = new XMLSerializer();
+        return Array.from(diagrams).map(function(svg, index) {
             return {
                 index: index,
-                svg: serializer.serializeToString(clone)
+                svg: inlineSVGStyles(svg)
             };
         });
     };
