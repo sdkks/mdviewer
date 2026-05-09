@@ -21,19 +21,6 @@ final class ExportFormatTests: XCTestCase {
 }
 
 final class DocumentStateExportTests: XCTestCase {
-    func testExportFilename_singleDiagram() {
-        let state = DocumentState()
-        XCTAssertEqual(state.exportFilename(forIndex: 0, total: 1, format: .svg), "diagram.svg")
-        XCTAssertEqual(state.exportFilename(forIndex: 0, total: 1, format: .png), "diagram.png")
-    }
-
-    func testExportFilename_multipleDiagrams() {
-        let state = DocumentState()
-        XCTAssertEqual(state.exportFilename(forIndex: 0, total: 3, format: .svg), "diagram-1.svg")
-        XCTAssertEqual(state.exportFilename(forIndex: 1, total: 3, format: .svg), "diagram-2.svg")
-        XCTAssertEqual(state.exportFilename(forIndex: 2, total: 3, format: .png), "diagram-3.png")
-    }
-
     func testMermaidDiagramCount_resetOnLoad() throws {
         let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)

@@ -74,16 +74,18 @@ struct MDViewerCommands: Commands {
     @Binding var fitDiagramsToView: Bool
 
     var body: some Commands {
-        CommandMenu("File") {
-            Menu("Export Mermaid Diagram") {
-                Button("As SVG...") {
+        CommandGroup(after: .importExport) {
+            Menu("Export Mermaid Diagrams") {
+                Button("As SVG (ZIP)...") {
                     documentState?.exportMermaidDiagrams(format: .svg)
                 }
-                Button("As PNG...") {
+                .disabled(documentState == nil)
+                Button("As PNG (ZIP)...") {
                     documentState?.exportMermaidDiagrams(format: .png)
                 }
+                .disabled(documentState == nil)
             }
-            .disabled(documentState == nil || documentState?.mermaidDiagramCount == 0)
+            .disabled(documentState == nil)
         }
 
         CommandMenu("View") {

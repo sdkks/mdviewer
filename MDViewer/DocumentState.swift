@@ -205,77 +205,91 @@ final class DocumentState: ObservableObject {
                     self.presentExportAlert(message: "No Mermaid diagrams found in this document.")
                     return
                 }
-                if diagrams.count == 1 {
-                    self.saveSingleDiagram(diagrams[0], format: format)
-                } else {
-                    self.showExportSelectionPanel(diagrams, format: format)
-                }
+                self.exportDiagramsAsZip(diagrams: diagrams, format: format)
             }
         }
     }
 
-    func exportFilename(forIndex index: Int, total: Int, format: ExportFormat) -> String {
-        if total == 1 {
-            return "diagram.\(format.fileExtension)"
-        } else {
-            return "diagram-\(index + 1).\(format.fileExtension)"
-        }
-    }
+    private func exportDiagramsAsZip(diagrams: [[String: Any]], format: ExportFormat) {
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let zipName = "mermaid-diagrams-\(format.fileExtension).zip"
 
-    private func saveSingleDiagram(_ diagram: [String: Any], format: ExportFormat) {
-        let panel = NSSavePanel()
-        panel.allowedContentTypes = [format.utType]
-        panel.nameFieldStringValue = exportFilename(forIndex: 0, total: 1, format: format)
-        panel.directoryURL = currentURL?.deletingLastPathComponent()
-        panel.begin { [weak self] result in
-            guard let self = self, result == .OK, let url = panel.url else { return }
-            if let svgString = diagram["svg"] as? String {
-                self.saveDiagram(svgString: svgString, format: format, to: url)
-            }
-        }
-    }
+        do {
+            try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
 
-    private func showExportSelectionPanel(_ diagrams: [[String: Any]], format: ExportFormat) {
-        let total = diagrams.count
-        func presentNext(index: Int) {
-            guard index < total else { return }
-            let panel = NSSavePanel()
-            panel.allowedContentTypes = [format.utType]
-            panel.nameFieldStringValue = exportFilename(forIndex: index, total: total, format: format)
-            panel.directoryURL = currentURL?.deletingLastPathComponent()
-            panel.title = "Export Diagram \(index + 1) of \(total)"
-            panel.begin { [weak self] result in
-                guard let self = self else { return }
-                if result == .OK, let url = panel.url {
-                    if let svgString = diagrams[index]["svg"] as? String {
-                        self.saveDiagram(svgString: svgString, format: format, to: url)
+            for (index, diagram) in diagrams.enumerated() {
+                guard let svgString = diagram["svg"] as? String else { continue }
+                let filename = "diagram-\(index + 1).\(format.fileExtension)"
+                let fileURL = tempDir.appendingPathComponent(filename)
+
+                switch format {
+                case .svg:
+                    try svgString.write(to: fileURL, atomically: true, encoding: .utf8)
+                case .png:
+                    if let pngData = svgToPNGData(svgString) {
+                        try pngData.write(to: fileURL)
                     }
                 }
-                presentNext(index: index + 1)
             }
+
+            let zipURL = tempDir.appendingPathComponent(zipName)
+            let fileNames = diagrams.indices.map { "diagram-\($0 + 1).\(format.fileExtension)" }
+            try createZip(at: zipURL, sourceDir: tempDir, files: fileNames)
+
+            let panel = NSSavePanel()
+            panel.allowedContentTypes = [.zip]
+            panel.nameFieldStringValue = zipName
+            panel.directoryURL = self.currentURL?.deletingLastPathComponent()
+            panel.begin { [weak self] result in
+                guard let self = self, result == .OK, let destinationURL = panel.url else {
+                    try? FileManager.default.removeItem(at: tempDir)
+                    return
+                }
+                do {
+                    if FileManager.default.fileExists(atPath: destinationURL.path) {
+                        try FileManager.default.removeItem(at: destinationURL)
+                    }
+                    try FileManager.default.copyItem(at: zipURL, to: destinationURL)
+                } catch {
+                    self.presentExportAlert(message: "Failed to save ZIP: \(error.localizedDescription)")
+                }
+                try? FileManager.default.removeItem(at: tempDir)
+            }
+        } catch {
+            presentExportAlert(message: "Failed to create export: \(error.localizedDescription)")
+            try? FileManager.default.removeItem(at: tempDir)
         }
-        presentNext(index: 0)
     }
 
-    private func saveDiagram(svgString: String, format: ExportFormat, to url: URL) {
-        switch format {
-        case .svg:
-            try? svgString.write(to: url, atomically: true, encoding: .utf8)
-        case .png:
-            convertSVGToPNG(svgString, saveTo: url)
-        }
-    }
-
-    private func convertSVGToPNG(_ svgString: String, saveTo url: URL) {
+    private func svgToPNGData(_ svgString: String) -> Data? {
         guard let data = svgString.data(using: .utf8),
               let image = NSImage(data: data),
               let tiffData = image.tiffRepresentation,
               let bitmap = NSBitmapImageRep(data: tiffData),
               let pngData = bitmap.representation(using: .png, properties: [:]) else {
-            // Best-effort: silently skip if conversion fails
-            return
+            return nil
         }
-        try? pngData.write(to: url)
+        return pngData
+    }
+
+    private func createZip(at zipURL: URL, sourceDir: URL, files: [String]) throws {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/zip")
+        process.arguments = ["-j", zipURL.path] + files.map { sourceDir.appendingPathComponent($0).path }
+        process.currentDirectoryURL = sourceDir
+
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = pipe
+
+        try process.run()
+        process.waitUntilExit()
+
+        if process.terminationStatus != 0 {
+            let output = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+            throw NSError(domain: "MDViewer", code: Int(process.terminationStatus),
+                          userInfo: [NSLocalizedDescriptionKey: "zip failed: \(output)"])
+        }
     }
 
     private func presentExportAlert(message: String) {
