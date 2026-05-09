@@ -447,11 +447,17 @@ a:focus-visible, pre.mermaid:focus-visible {
             window.webkit.messageHandlers.mermaidCount.postMessage(count);
         }
 
-        // Notify Swift of the current document's H1 headers
+        // Notify Swift of the current document's H1/H2 header outline
         if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.mermaidH1Headers) {
-            const h1s = document.querySelectorAll('h1');
-            const headers = Array.from(h1s).map(function(h1) {
-                return {text: h1.textContent || '', id: h1.id || ''};
+            const headers = [];
+            let currentH1 = null;
+            document.querySelectorAll('h1, h2').forEach(function(el) {
+                if (el.tagName === 'H1') {
+                    currentH1 = {text: el.textContent || '', id: el.id || '', h2s: []};
+                    headers.push(currentH1);
+                } else if (el.tagName === 'H2' && currentH1) {
+                    currentH1.h2s.push({text: el.textContent || '', id: el.id || ''});
+                }
             });
             window.webkit.messageHandlers.mermaidH1Headers.postMessage(headers);
         }

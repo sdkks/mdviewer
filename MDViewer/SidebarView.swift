@@ -4,7 +4,7 @@ struct SidebarView: View {
     @ObservedObject var documentState: DocumentState
     @Binding var isVisible: Bool
     @State private var expandedFiles: Set<URL> = []
-    @State private var headerCache: [URL: [(text: String, id: String)]] = [:]
+    @State private var headerCache: [URL: [HeaderNode]] = [:]
 
     var body: some View {
         VStack(spacing: 0) {
@@ -62,14 +62,17 @@ struct SidebarView: View {
 
     private enum RowItem: Identifiable {
         case file(url: URL, isExpanded: Bool, isCurrent: Bool)
-        case header(text: String, anchorID: String, fileURL: URL)
+        case h1(text: String, anchorID: String, fileURL: URL)
+        case h2(text: String, anchorID: String, fileURL: URL)
 
         var id: String {
             switch self {
             case .file(let url, _, _):
                 return "file:\(url.path)"
-            case .header(let text, _, let fileURL):
-                return "header:\(fileURL.path)#\(text)"
+            case .h1(let text, _, let fileURL):
+                return "h1:\(fileURL.path)#\(text)"
+            case .h2(let text, _, let fileURL):
+                return "h2:\(fileURL.path)#\(text)"
             }
         }
     }
@@ -81,9 +84,12 @@ struct SidebarView: View {
             let isExpanded = expandedFiles.contains(url)
             rows.append(.file(url: url, isExpanded: isExpanded, isCurrent: isCurrent))
             if isExpanded {
-                let headers = headersForFile(url)
-                for header in headers {
-                    rows.append(.header(text: header.text, anchorID: header.id, fileURL: url))
+                let nodes = headersForFile(url)
+                for node in nodes {
+                    rows.append(.h1(text: node.text, anchorID: node.id, fileURL: url))
+                    for h2 in node.h2s {
+                        rows.append(.h2(text: h2.text, anchorID: h2.id, fileURL: url))
+                    }
                 }
             }
         }
@@ -94,8 +100,10 @@ struct SidebarView: View {
         switch item {
         case .file(let url, let isExpanded, let isCurrent):
             return AnyView(fileRow(url: url, isExpanded: isExpanded, isCurrent: isCurrent))
-        case .header(let text, let anchorID, let fileURL):
-            return AnyView(headerRow(text: text, anchorID: anchorID, fileURL: fileURL))
+        case .h1(let text, let anchorID, let fileURL):
+            return AnyView(h1Row(text: text, anchorID: anchorID, fileURL: fileURL))
+        case .h2(let text, let anchorID, let fileURL):
+            return AnyView(h2Row(text: text, anchorID: anchorID, fileURL: fileURL))
         }
     }
 
@@ -131,7 +139,7 @@ struct SidebarView: View {
 
     // MARK: - Header Row
 
-    private func headerRow(text: String, anchorID: String, fileURL: URL) -> some View {
+    private func h1Row(text: String, anchorID: String, fileURL: URL) -> some View {
         HStack(spacing: 0) {
             Rectangle()
                 .fill(Color.secondary.opacity(0.3))
@@ -158,6 +166,37 @@ struct SidebarView: View {
         }
     }
 
+    private func h2Row(text: String, anchorID: String, fileURL: URL) -> some View {
+        HStack(spacing: 0) {
+            Rectangle()
+                .fill(Color.clear)
+                .frame(width: 12)
+
+            Rectangle()
+                .fill(Color.secondary.opacity(0.2))
+                .frame(width: 1)
+                .padding(.leading, 4)
+
+            Text(text)
+                .font(.system(size: 11))
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .foregroundColor(.secondary.opacity(0.8))
+                .padding(.leading, 8)
+                .padding(.vertical, 1)
+
+            Spacer()
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if fileURL == documentState.currentURL {
+                documentState.scrollToAnchor(anchorID)
+            } else {
+                documentState.load(url: fileURL, scrollToAnchor: anchorID)
+            }
+        }
+    }
+
     // MARK: - Helpers
 
     private func toggleExpanded(_ url: URL) {
@@ -167,14 +206,14 @@ struct SidebarView: View {
             expandedFiles.insert(url)
             // Lazy-parse headers for non-current files
             if url != documentState.currentURL && headerCache[url] == nil {
-                headerCache[url] = DocumentState.parseH1Headers(from: url)
+                headerCache[url] = DocumentState.parseHeaders(from: url)
             }
         }
     }
 
-    private func headersForFile(_ url: URL) -> [(text: String, id: String)] {
+    private func headersForFile(_ url: URL) -> [HeaderNode] {
         if url == documentState.currentURL {
-            return documentState.h1Headers
+            return documentState.currentFileHeaders
         }
         return headerCache[url] ?? []
     }

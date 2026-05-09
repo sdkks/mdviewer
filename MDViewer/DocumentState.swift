@@ -27,6 +27,17 @@ enum ExportFormat {
     }
 }
 
+struct HeaderNode {
+    let text: String
+    let id: String
+    let h2s: [HeaderItem]
+}
+
+struct HeaderItem {
+    let text: String
+    let id: String
+}
+
 final class DocumentState: ObservableObject {
     @Published var currentURL: URL?
     @Published var renderedText: String = ""
@@ -38,15 +49,15 @@ final class DocumentState: ObservableObject {
     @Published var findTotalCount: Int = 0
     @Published var showSidebar: Bool = false
     @Published var mermaidDiagramCount: Int = 0
-    @Published var h1Headers: [(text: String, id: String)] = []
+    @Published var currentFileHeaders: [HeaderNode] = []
     weak var webView: WKWebView?
     private var pendingScrollAnchor: String?
 
     func load(url: URL, scrollToAnchor anchor: String? = nil) {
         renderedText = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
         currentURL = url.standardizedFileURL
-        mermaidDiagramCount = 0   // reset; JS will repopulate after render
-        h1Headers = []            // reset; JS will repopulate after render
+        mermaidDiagramCount = 0      // reset; JS will repopulate after render
+        currentFileHeaders = []      // reset; JS will repopulate after render
         dismissFind()
         pendingScrollAnchor = anchor
     }
@@ -82,12 +93,14 @@ final class DocumentState: ObservableObject {
         load(url: siblings[idx + 1])
     }
 
-    // Parse H1 headers from a Markdown file, skipping fenced code blocks.
-    // Returns up to 20 headers.
-    static func parseH1Headers(from url: URL) -> [(text: String, id: String)] {
+    // Parse H1 and H2 headers from a Markdown file, skipping fenced code blocks.
+    // Returns up to 20 H1 nodes, each with its nested H2s.
+    static func parseHeaders(from url: URL) -> [HeaderNode] {
         guard let content = try? String(contentsOf: url, encoding: .utf8) else { return [] }
-        var headers: [(text: String, id: String)] = []
+        var nodes: [HeaderNode] = []
+        var currentH2s: [HeaderItem] = []
         var inCodeBlock = false
+        var h1Count = 0
 
         for line in content.components(separatedBy: .newlines) {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
@@ -95,16 +108,40 @@ final class DocumentState: ObservableObject {
                 inCodeBlock.toggle()
                 continue
             }
-            if !inCodeBlock, trimmed.hasPrefix("# ") {
+            if inCodeBlock { continue }
+
+            if trimmed.hasPrefix("## ") {
+                let title = String(trimmed.dropFirst(3)).trimmingCharacters(in: .whitespaces)
+                currentH2s.append(HeaderItem(text: title, id: slugify(title)))
+            } else if trimmed.hasPrefix("# ") {
+                if !nodes.isEmpty {
+                    nodes[nodes.count - 1] = HeaderNode(
+                        text: nodes[nodes.count - 1].text,
+                        id: nodes[nodes.count - 1].id,
+                        h2s: currentH2s
+                    )
+                }
                 let title = String(trimmed.dropFirst(2)).trimmingCharacters(in: .whitespaces)
-                let id = title.lowercased()
-                    .replacingOccurrences(of: " ", with: "-")
-                    .replacingOccurrences(of: "[^a-z0-9-]", with: "", options: .regularExpression)
-                headers.append((text: title, id: id))
-                if headers.count >= 20 { break }
+                nodes.append(HeaderNode(text: title, id: slugify(title), h2s: []))
+                currentH2s = []
+                h1Count += 1
+                if h1Count >= 20 { break }
             }
         }
-        return headers
+        if !nodes.isEmpty {
+            nodes[nodes.count - 1] = HeaderNode(
+                text: nodes[nodes.count - 1].text,
+                id: nodes[nodes.count - 1].id,
+                h2s: currentH2s
+            )
+        }
+        return nodes
+    }
+
+    private static func slugify(_ text: String) -> String {
+        text.lowercased()
+            .replacingOccurrences(of: " ", with: "-")
+            .replacingOccurrences(of: "[^a-z0-9-]", with: "", options: .regularExpression)
     }
 
     func sibling(of url: URL) -> [URL] {

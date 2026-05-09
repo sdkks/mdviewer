@@ -72,9 +72,16 @@ struct MarkdownWebView: NSViewRepresentable {
                       let diagrams = dict["diagrams"] as? [[String: Any]] else { return }
                 documentState?.completePNGExport(diagrams: diagrams)
             case "mermaidH1Headers":
-                guard let headers = message.body as? [[String: String]] else { return }
-                let parsed = headers.map { ($0["text"] ?? "", $0["id"] ?? "") }
-                documentState?.h1Headers = parsed
+                guard let nodes = message.body as? [[String: Any]] else { return }
+                let parsed = nodes.compactMap { dict -> HeaderNode? in
+                    guard let text = dict["text"] as? String,
+                          let id = dict["id"] as? String else { return nil }
+                    let h2s = (dict["h2s"] as? [[String: String]])?.compactMap {
+                        HeaderItem(text: $0["text"] ?? "", id: $0["id"] ?? "")
+                    } ?? []
+                    return HeaderNode(text: text, id: id, h2s: h2s)
+                }
+                documentState?.currentFileHeaders = parsed
             default:
                 break
             }
