@@ -446,6 +446,15 @@ a:focus-visible, pre.mermaid:focus-visible {
             const count = document.querySelectorAll('pre.mermaid svg').length;
             window.webkit.messageHandlers.mermaidCount.postMessage(count);
         }
+
+        // Notify Swift of the current document's H1 headers
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.mermaidH1Headers) {
+            const h1s = document.querySelectorAll('h1');
+            const headers = Array.from(h1s).map(function(h1) {
+                return {text: h1.textContent || '', id: h1.id || ''};
+            });
+            window.webkit.messageHandlers.mermaidH1Headers.postMessage(headers);
+        }
     })();
 
     // Inline computed CSS styles into an SVG clone so it renders correctly

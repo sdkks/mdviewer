@@ -3,6 +3,8 @@ import SwiftUI
 struct SidebarView: View {
     @ObservedObject var documentState: DocumentState
     @Binding var isVisible: Bool
+    @State private var expandedFiles: Set<URL> = []
+    @State private var headerCache: [URL: [(text: String, id: String)]] = [:]
 
     var body: some View {
         VStack(spacing: 0) {
@@ -12,6 +14,11 @@ struct SidebarView: View {
         }
         .frame(width: 220)
         .background(Color(nsColor: .controlBackgroundColor))
+        .onChange(of: documentState.currentURL) { newURL in
+            if let url = newURL {
+                expandedFiles.insert(url)
+            }
+        }
     }
 
     private var header: some View {
@@ -41,25 +48,135 @@ struct SidebarView: View {
                     emptyState(message: "No Markdown files in this folder.")
                 }
             } else {
-                List(selection: Binding(
-                    get: { documentState.currentURL },
-                    set: { newURL in
-                        if let url = newURL {
-                            documentState.load(url: url)
-                        }
-                    }
-                )) {
-                    ForEach(siblingFiles, id: \.self) { url in
-                        Text(url.lastPathComponent)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                            .help(url.lastPathComponent)
-                            .tag(url)
+                List {
+                    ForEach(rowItems, id: \.id) { item in
+                        rowView(for: item)
                     }
                 }
                 .listStyle(.plain)
             }
         }
+    }
+
+    // MARK: - Row Types
+
+    private enum RowItem: Identifiable {
+        case file(url: URL, isExpanded: Bool, isCurrent: Bool)
+        case header(text: String, anchorID: String, fileURL: URL)
+
+        var id: String {
+            switch self {
+            case .file(let url, _, _):
+                return "file:\(url.path)"
+            case .header(let text, _, let fileURL):
+                return "header:\(fileURL.path)#\(text)"
+            }
+        }
+    }
+
+    private var rowItems: [RowItem] {
+        var rows: [RowItem] = []
+        for url in siblingFiles {
+            let isCurrent = url == documentState.currentURL
+            let isExpanded = expandedFiles.contains(url)
+            rows.append(.file(url: url, isExpanded: isExpanded, isCurrent: isCurrent))
+            if isExpanded {
+                let headers = headersForFile(url)
+                for header in headers {
+                    rows.append(.header(text: header.text, anchorID: header.id, fileURL: url))
+                }
+            }
+        }
+        return rows
+    }
+
+    private func rowView(for item: RowItem) -> some View {
+        switch item {
+        case .file(let url, let isExpanded, let isCurrent):
+            return AnyView(fileRow(url: url, isExpanded: isExpanded, isCurrent: isCurrent))
+        case .header(let text, let anchorID, let fileURL):
+            return AnyView(headerRow(text: text, anchorID: anchorID, fileURL: fileURL))
+        }
+    }
+
+    // MARK: - File Row
+
+    private func fileRow(url: URL, isExpanded: Bool, isCurrent: Bool) -> some View {
+        HStack(spacing: 4) {
+            Button(action: { toggleExpanded(url) }) {
+                Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                    .font(.system(size: 10, weight: .semibold))
+                    .frame(width: 16, height: 16)
+            }
+            .buttonStyle(.plain)
+            .foregroundColor(.secondary)
+
+            Text(url.lastPathComponent)
+                .font(.system(size: 13, weight: isCurrent ? .semibold : .regular))
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .foregroundColor(isCurrent ? .accentColor : .primary)
+
+            Spacer()
+        }
+        .padding(.leading, 4)
+        .padding(.vertical, 2)
+        .background(isCurrent ? Color.accentColor.opacity(0.1) : Color.clear)
+        .cornerRadius(4)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            documentState.load(url: url)
+        }
+    }
+
+    // MARK: - Header Row
+
+    private func headerRow(text: String, anchorID: String, fileURL: URL) -> some View {
+        HStack(spacing: 0) {
+            Rectangle()
+                .fill(Color.secondary.opacity(0.3))
+                .frame(width: 1)
+                .padding(.leading, 12)
+
+            Text(text)
+                .font(.system(size: 12))
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .foregroundColor(.secondary)
+                .padding(.leading, 8)
+                .padding(.vertical, 1)
+
+            Spacer()
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if fileURL == documentState.currentURL {
+                documentState.scrollToAnchor(anchorID)
+            } else {
+                documentState.load(url: fileURL, scrollToAnchor: anchorID)
+            }
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func toggleExpanded(_ url: URL) {
+        if expandedFiles.contains(url) {
+            expandedFiles.remove(url)
+        } else {
+            expandedFiles.insert(url)
+            // Lazy-parse headers for non-current files
+            if url != documentState.currentURL && headerCache[url] == nil {
+                headerCache[url] = DocumentState.parseH1Headers(from: url)
+            }
+        }
+    }
+
+    private func headersForFile(_ url: URL) -> [(text: String, id: String)] {
+        if url == documentState.currentURL {
+            return documentState.h1Headers
+        }
+        return headerCache[url] ?? []
     }
 
     private func emptyState(message: String) -> some View {
@@ -112,7 +229,6 @@ struct SidebarView: View {
 
         let mdFiles = files.filter { mdExtensions.contains($0.pathExtension.lowercased()) }
 
-        // Pre-fetch dates in a single pass for performance
         var datedFiles: [(url: URL, date: Date)] = []
         for file in mdFiles {
             let date = (try? file.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast

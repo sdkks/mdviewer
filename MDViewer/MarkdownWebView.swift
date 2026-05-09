@@ -71,6 +71,10 @@ struct MarkdownWebView: NSViewRepresentable {
                 guard let dict = message.body as? [String: Any],
                       let diagrams = dict["diagrams"] as? [[String: Any]] else { return }
                 documentState?.completePNGExport(diagrams: diagrams)
+            case "mermaidH1Headers":
+                guard let headers = message.body as? [[String: String]] else { return }
+                let parsed = headers.map { ($0["text"] ?? "", $0["id"] ?? "") }
+                documentState?.h1Headers = parsed
             default:
                 break
             }
@@ -132,6 +136,7 @@ struct MarkdownWebView: NSViewRepresentable {
         context.coordinator.baseDirectory = baseDirectory
         config.userContentController.add(context.coordinator, name: "mermaidCount")
         config.userContentController.add(context.coordinator, name: "mermaidPNGExport")
+        config.userContentController.add(context.coordinator, name: "mermaidH1Headers")
 
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator

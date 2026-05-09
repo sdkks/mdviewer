@@ -38,13 +38,34 @@ final class DocumentState: ObservableObject {
     @Published var findTotalCount: Int = 0
     @Published var showSidebar: Bool = false
     @Published var mermaidDiagramCount: Int = 0
+    @Published var h1Headers: [(text: String, id: String)] = []
     weak var webView: WKWebView?
+    private var pendingScrollAnchor: String?
 
-    func load(url: URL) {
+    func load(url: URL, scrollToAnchor anchor: String? = nil) {
         renderedText = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
         currentURL = url.standardizedFileURL
         mermaidDiagramCount = 0   // reset; JS will repopulate after render
+        h1Headers = []            // reset; JS will repopulate after render
         dismissFind()
+        pendingScrollAnchor = anchor
+    }
+
+    func scrollToAnchor(_ anchor: String) {
+        let escaped = anchor
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "'", with: "\\'")
+        let js = "document.getElementById('\(escaped)')?.scrollIntoView({behavior:'instant'})"
+        webView?.evaluateJavaScript(js, completionHandler: nil)
+    }
+
+    func attemptPendingScroll() {
+        guard let anchor = pendingScrollAnchor else { return }
+        pendingScrollAnchor = nil
+        // Give the webview a moment to finish rendering
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+            self?.scrollToAnchor(anchor)
+        }
     }
 
     func navigatePrevious() {
@@ -59,6 +80,31 @@ final class DocumentState: ObservableObject {
         let siblings = sibling(of: current)
         guard let idx = siblings.firstIndex(of: current), idx < siblings.count - 1 else { return }
         load(url: siblings[idx + 1])
+    }
+
+    // Parse H1 headers from a Markdown file, skipping fenced code blocks.
+    // Returns up to 20 headers.
+    static func parseH1Headers(from url: URL) -> [(text: String, id: String)] {
+        guard let content = try? String(contentsOf: url, encoding: .utf8) else { return [] }
+        var headers: [(text: String, id: String)] = []
+        var inCodeBlock = false
+
+        for line in content.components(separatedBy: .newlines) {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.hasPrefix("```") {
+                inCodeBlock.toggle()
+                continue
+            }
+            if !inCodeBlock, trimmed.hasPrefix("# ") {
+                let title = String(trimmed.dropFirst(2)).trimmingCharacters(in: .whitespaces)
+                let id = title.lowercased()
+                    .replacingOccurrences(of: " ", with: "-")
+                    .replacingOccurrences(of: "[^a-z0-9-]", with: "", options: .regularExpression)
+                headers.append((text: title, id: id))
+                if headers.count >= 20 { break }
+            }
+        }
+        return headers
     }
 
     func sibling(of url: URL) -> [URL] {

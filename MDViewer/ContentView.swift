@@ -91,6 +91,7 @@ struct ContentView: View {
                 NSApp.keyWindow?.title = url.lastPathComponent
                 NSApp.keyWindow?.representedURL = url
             }
+            documentState.attemptPendingScroll()
         })
         .onChange(of: documentState.showSidebar) { newValue in
             // Persist per-document toggle so it becomes the new default.
