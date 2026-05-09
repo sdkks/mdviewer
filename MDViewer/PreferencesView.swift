@@ -3,6 +3,8 @@ import SwiftUI
 struct PreferencesView: View {
     @AppStorage("appearanceMode") private var appearanceMode: String = AppearanceMode.system.rawValue
     @AppStorage("zoomLevel") private var zoomLevel: Double = 1.0
+    @AppStorage("fitDiagramsToView") private var fitDiagramsToView: Bool = true
+    @AppStorage("showSidebar") private var showSidebar: Bool = false
     @Binding var lightThemeID: String
     @Binding var darkThemeID: String
 
@@ -45,6 +47,20 @@ struct PreferencesView: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
+            }
+
+            Section {
+                Toggle("Fit Diagrams to View", isOn: $fitDiagramsToView)
+                    .onChange(of: fitDiagramsToView) { _ in
+                        NotificationCenter.default.post(name: .reloadDocument, object: nil)
+                    }
+            }
+
+            Section {
+                Toggle("Show Sidebar by Default", isOn: $showSidebar)
+                    .onChange(of: showSidebar) { _ in
+                        NotificationCenter.default.post(name: .sidebarPreferenceChanged, object: nil)
+                    }
             }
 
             Divider()

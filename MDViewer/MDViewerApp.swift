@@ -52,6 +52,7 @@ struct AboutView: View {
 
 extension Notification.Name {
     static let reloadDocument = Notification.Name("reloadDocument")
+    static let sidebarPreferenceChanged = Notification.Name("sidebarPreferenceChanged")
 }
 
 enum AppearanceMode: String, CaseIterable {
@@ -70,8 +71,43 @@ enum AppearanceMode: String, CaseIterable {
 
 struct MDViewerCommands: Commands {
     @FocusedValue(\.documentState) private var documentState: DocumentState?
+    @Binding var fitDiagramsToView: Bool
 
     var body: some Commands {
+        CommandMenu("File") {
+            Menu("Export Mermaid Diagram") {
+                Button("As SVG...") {
+                    documentState?.exportMermaidDiagrams(format: .svg)
+                }
+                Button("As PNG...") {
+                    documentState?.exportMermaidDiagrams(format: .png)
+                }
+            }
+            .disabled(documentState == nil || documentState?.mermaidDiagramCount == 0)
+        }
+
+        CommandMenu("View") {
+            Button("Toggle Sidebar") {
+                documentState?.showSidebar.toggle()
+            }
+            .keyboardShortcut("s", modifiers: [.command, .shift])
+            .disabled(documentState == nil)
+
+            Button("Toggle Sidebar") {
+                documentState?.showSidebar.toggle()
+            }
+            .keyboardShortcut("b", modifiers: .command)
+            .disabled(documentState == nil)
+
+            Divider()
+
+            Button(fitDiagramsToView ? "Disable Diagram Fit-to-View" : "Enable Diagram Fit-to-View") {
+                fitDiagramsToView.toggle()
+                NotificationCenter.default.post(name: .reloadDocument, object: nil)
+            }
+            .disabled(documentState == nil)
+        }
+
         CommandMenu("Navigate") {
             Button("Previous File") {
                 documentState?.navigatePrevious()
@@ -140,6 +176,7 @@ struct MDViewerApp: App {
     @AppStorage("zoomLevel") private var zoomLevel: Double = 1.0
     @AppStorage("lightThemeID") private var lightThemeID: String = "github-light"
     @AppStorage("darkThemeID") private var darkThemeID: String = "github-dark"
+    @AppStorage("fitDiagramsToView") private var fitDiagramsToView: Bool = true
 
     var body: some Scene {
         DocumentGroup(viewing: MarkdownDocument.self) { file in
@@ -149,7 +186,8 @@ struct MDViewerApp: App {
                 appearanceMode: AppearanceMode(rawValue: appearanceMode) ?? .system,
                 zoomLevel: zoomLevel,
                 lightThemeID: lightThemeID,
-                darkThemeID: darkThemeID
+                darkThemeID: darkThemeID,
+                fitDiagramsToView: fitDiagramsToView
             )
         }
         .commands {
@@ -158,7 +196,7 @@ struct MDViewerApp: App {
                     AboutWindowController.show()
                 }
             }
-            MDViewerCommands()
+            MDViewerCommands(fitDiagramsToView: $fitDiagramsToView)
             CommandGroup(after: .toolbar) {
                 Button("Reload") {
                     NotificationCenter.default.post(name: .reloadDocument, object: nil)

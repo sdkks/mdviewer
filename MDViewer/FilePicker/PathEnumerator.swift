@@ -3,7 +3,7 @@ import Foundation
 enum PathEnumerator {
     static let mdExtensions: Set<String> = ["md", "markdown", "mdown", "mkd"]
 
-    /// Returns PathCandidates under `directory` whose last path segment starts with `prefix` (case-insensitive).
+    /// Returns PathCandidates under `directory` matching `prefix` via fuzzy scoring.
     /// Directories are always included (any name). Files must have a recognised markdown extension.
     /// On any error (permissions, missing path), returns an empty array.
     static func candidates(in directory: URL, prefix: String) async -> [PathCandidate] {
@@ -30,20 +30,55 @@ enum PathEnumerator {
                 isDir = vals.isDirectory ?? false
             }
 
-            // Apply prefix filter (empty prefix matches everything)
+            // Apply prefix filter
             if !prefix.isEmpty {
-                guard name.lowercased().contains(prefix.lowercased()) else { continue }
-            }
-
-            if isDir {
-                dirs.append(PathCandidate(url: item, displayName: name + "/", isDirectory: true))
-            } else if mdExtensions.contains(ext) {
-                files.append(PathCandidate(url: item, displayName: name, isDirectory: false))
+                guard let fuzzy = FuzzyMatcher.score(prefix, against: name) else { continue }
+                if isDir {
+                    dirs.append(PathCandidate(
+                        url: item,
+                        displayName: name + "/",
+                        isDirectory: true,
+                        score: fuzzy.score,
+                        matchedIndices: fuzzy.matchedIndices
+                    ))
+                } else if mdExtensions.contains(ext) {
+                    files.append(PathCandidate(
+                        url: item,
+                        displayName: name,
+                        isDirectory: false,
+                        score: fuzzy.score,
+                        matchedIndices: fuzzy.matchedIndices
+                    ))
+                }
+            } else {
+                if isDir {
+                    dirs.append(PathCandidate(
+                        url: item,
+                        displayName: name + "/",
+                        isDirectory: true,
+                        score: 0,
+                        matchedIndices: []
+                    ))
+                } else if mdExtensions.contains(ext) {
+                    files.append(PathCandidate(
+                        url: item,
+                        displayName: name,
+                        isDirectory: false,
+                        score: 0,
+                        matchedIndices: []
+                    ))
+                }
             }
         }
 
-        dirs.sort { $0.displayName.lowercased() < $1.displayName.lowercased() }
-        files.sort { $0.displayName.lowercased() < $1.displayName.lowercased() }
+        dirs.sort {
+            if $0.score != $1.score { return $0.score > $1.score }
+            return $0.displayName.lowercased() < $1.displayName.lowercased()
+        }
+        files.sort {
+            if $0.score != $1.score { return $0.score > $1.score }
+            return $0.displayName.lowercased() < $1.displayName.lowercased()
+        }
 
         return dirs + files
     }

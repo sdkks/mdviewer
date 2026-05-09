@@ -7,19 +7,21 @@ struct ContentView: View {
     let zoomLevel: Double
     let lightThemeID: String
     let darkThemeID: String
+    let fitDiagramsToView: Bool
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var text: String
     @StateObject private var documentState = DocumentState()
     @State private var filePickerState: FilePickerState? = nil
 
-    init(document: MarkdownDocument, fileURL: URL?, appearanceMode: AppearanceMode, zoomLevel: Double, lightThemeID: String, darkThemeID: String) {
+    init(document: MarkdownDocument, fileURL: URL?, appearanceMode: AppearanceMode, zoomLevel: Double, lightThemeID: String, darkThemeID: String, fitDiagramsToView: Bool) {
         self.document = document
         self.fileURL = fileURL
         self.appearanceMode = appearanceMode
         self.zoomLevel = zoomLevel
         self.lightThemeID = lightThemeID
         self.darkThemeID = darkThemeID
+        self.fitDiagramsToView = fitDiagramsToView
         self._text = State(initialValue: document.text)
     }
 
@@ -37,23 +39,38 @@ struct ContentView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            MarkdownWebView(text: text, zoomLevel: zoomLevel, theme: theme)
+        HStack(spacing: 0) {
+            if documentState.showSidebar {
+                SidebarView(documentState: documentState, isVisible: $documentState.showSidebar)
+                    .transition(reduceMotion ? .identity : .move(edge: .leading))
+            }
+
+            ZStack(alignment: .bottom) {
+                MarkdownWebView(
+                    text: text,
+                    zoomLevel: zoomLevel,
+                    theme: theme,
+                    baseDirectory: documentState.currentURL?.deletingLastPathComponent()
+                        ?? fileURL?.deletingLastPathComponent(),
+                    fitDiagramsToView: fitDiagramsToView
+                )
                 .environmentObject(documentState)
 
-            if documentState.showFindBar {
-                FindBarView(documentState: documentState)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
+                if documentState.showFindBar {
+                    FindBarView(documentState: documentState)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
 
-            if let state = filePickerState {
-                Color.clear
-                    .contentShape(Rectangle())
-                    .onTapGesture { documentState.showFilePicker = false }
-                FilePickerView(state: state)
-                    .transition(reduceMotion ? .identity : .opacity)
+                if let state = filePickerState {
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .onTapGesture { documentState.showFilePicker = false }
+                    FilePickerView(state: state)
+                        .transition(reduceMotion ? .identity : .opacity)
+                }
             }
         }
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: documentState.showSidebar)
         .animation(.easeInOut(duration: 0.15), value: documentState.showFindBar)
         .animation(.easeInOut(duration: 0.15), value: documentState.showFilePicker)
         .focusedSceneValue(\.documentState, documentState)
@@ -62,10 +79,27 @@ struct ContentView: View {
             if let url = fileURL {
                 documentState.load(url: url)
             }
+            // Sync sidebar visibility from the global preference.
+            documentState.showSidebar = UserDefaults.standard.bool(forKey: "showSidebar")
         }
         .onChange(of: documentState.currentURL, perform: { _ in
             text = documentState.renderedText
+            // DocumentGroup manages the window title via the document; since we navigate
+            // by loading content into the existing document state, we must manually sync
+            // the title bar and proxy icon to reflect the new file.
+            if let url = documentState.currentURL {
+                NSApp.keyWindow?.title = url.lastPathComponent
+                NSApp.keyWindow?.representedURL = url
+            }
         })
+        .onChange(of: documentState.showSidebar) { newValue in
+            // Persist per-document toggle so it becomes the new default.
+            UserDefaults.standard.set(newValue, forKey: "showSidebar")
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .sidebarPreferenceChanged)) { _ in
+            // Live-sync when the user changes the preference in the Settings panel.
+            documentState.showSidebar = UserDefaults.standard.bool(forKey: "showSidebar")
+        }
         .onReceive(NotificationCenter.default.publisher(for: .reloadDocument)) { _ in
             reload()
         }

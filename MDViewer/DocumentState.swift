@@ -2,10 +2,29 @@ import Foundation
 import AppKit
 import WebKit
 import Combine
+import UniformTypeIdentifiers
 
 enum FileSortOrder: String, CaseIterable {
     case alphabetical
     case dateModified
+}
+
+enum ExportFormat {
+    case svg, png
+
+    var utType: UTType {
+        switch self {
+        case .svg: return .svg
+        case .png: return .png
+        }
+    }
+
+    var fileExtension: String {
+        switch self {
+        case .svg: return "svg"
+        case .png: return "png"
+        }
+    }
 }
 
 final class DocumentState: ObservableObject {
@@ -17,11 +36,14 @@ final class DocumentState: ObservableObject {
     @Published var findMatchFound: Bool? = nil  // nil = no search yet
     @Published var findCurrentIndex: Int = 0
     @Published var findTotalCount: Int = 0
+    @Published var showSidebar: Bool = false
+    @Published var mermaidDiagramCount: Int = 0
     weak var webView: WKWebView?
 
     func load(url: URL) {
         renderedText = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
-        currentURL = url
+        currentURL = url.standardizedFileURL
+        mermaidDiagramCount = 0   // reset; JS will repopulate after render
         dismissFind()
     }
 
@@ -39,7 +61,7 @@ final class DocumentState: ObservableObject {
         load(url: siblings[idx + 1])
     }
 
-    private func sibling(of url: URL) -> [URL] {
+    func sibling(of url: URL) -> [URL] {
         let dir = url.deletingLastPathComponent()
         let mdExtensions = Set(["md", "markdown", "mdown", "mkd"])
         let files = (try? FileManager.default.contentsOfDirectory(
@@ -163,5 +185,104 @@ final class DocumentState: ObservableObject {
         if !query.isEmpty, let webView = webView {
             webView.find("", configuration: WKFindConfiguration()) { _ in }
         }
+    }
+
+    // MARK: - Mermaid Diagram Export
+
+    func exportMermaidDiagrams(format: ExportFormat) {
+        guard let webView = webView else {
+            presentExportAlert(message: "No web view available.")
+            return
+        }
+        webView.evaluateJavaScript("window.exportMermaidSVGs()") { [weak self] result, error in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                if let error = error {
+                    self.presentExportAlert(message: "Failed to extract diagrams: \(error.localizedDescription)")
+                    return
+                }
+                guard let diagrams = result as? [[String: Any]], !diagrams.isEmpty else {
+                    self.presentExportAlert(message: "No Mermaid diagrams found in this document.")
+                    return
+                }
+                if diagrams.count == 1 {
+                    self.saveSingleDiagram(diagrams[0], format: format)
+                } else {
+                    self.showExportSelectionPanel(diagrams, format: format)
+                }
+            }
+        }
+    }
+
+    func exportFilename(forIndex index: Int, total: Int, format: ExportFormat) -> String {
+        if total == 1 {
+            return "diagram.\(format.fileExtension)"
+        } else {
+            return "diagram-\(index + 1).\(format.fileExtension)"
+        }
+    }
+
+    private func saveSingleDiagram(_ diagram: [String: Any], format: ExportFormat) {
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [format.utType]
+        panel.nameFieldStringValue = exportFilename(forIndex: 0, total: 1, format: format)
+        panel.directoryURL = currentURL?.deletingLastPathComponent()
+        panel.begin { [weak self] result in
+            guard let self = self, result == .OK, let url = panel.url else { return }
+            if let svgString = diagram["svg"] as? String {
+                self.saveDiagram(svgString: svgString, format: format, to: url)
+            }
+        }
+    }
+
+    private func showExportSelectionPanel(_ diagrams: [[String: Any]], format: ExportFormat) {
+        let total = diagrams.count
+        func presentNext(index: Int) {
+            guard index < total else { return }
+            let panel = NSSavePanel()
+            panel.allowedContentTypes = [format.utType]
+            panel.nameFieldStringValue = exportFilename(forIndex: index, total: total, format: format)
+            panel.directoryURL = currentURL?.deletingLastPathComponent()
+            panel.title = "Export Diagram \(index + 1) of \(total)"
+            panel.begin { [weak self] result in
+                guard let self = self else { return }
+                if result == .OK, let url = panel.url {
+                    if let svgString = diagrams[index]["svg"] as? String {
+                        self.saveDiagram(svgString: svgString, format: format, to: url)
+                    }
+                }
+                presentNext(index: index + 1)
+            }
+        }
+        presentNext(index: 0)
+    }
+
+    private func saveDiagram(svgString: String, format: ExportFormat, to url: URL) {
+        switch format {
+        case .svg:
+            try? svgString.write(to: url, atomically: true, encoding: .utf8)
+        case .png:
+            convertSVGToPNG(svgString, saveTo: url)
+        }
+    }
+
+    private func convertSVGToPNG(_ svgString: String, saveTo url: URL) {
+        guard let data = svgString.data(using: .utf8),
+              let image = NSImage(data: data),
+              let tiffData = image.tiffRepresentation,
+              let bitmap = NSBitmapImageRep(data: tiffData),
+              let pngData = bitmap.representation(using: .png, properties: [:]) else {
+            // Best-effort: silently skip if conversion fails
+            return
+        }
+        try? pngData.write(to: url)
+    }
+
+    private func presentExportAlert(message: String) {
+        let alert = NSAlert()
+        alert.messageText = "Export Error"
+        alert.informativeText = message
+        alert.alertStyle = .warning
+        alert.runModal()
     }
 }

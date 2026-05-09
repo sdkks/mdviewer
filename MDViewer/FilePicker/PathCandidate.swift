@@ -5,4 +5,6 @@ struct PathCandidate: Identifiable, Equatable {
     let url: URL
     let displayName: String   // "filename.md" or "dirname/"
     let isDirectory: Bool
+    let score: Int
+    let matchedIndices: [Int]
 }

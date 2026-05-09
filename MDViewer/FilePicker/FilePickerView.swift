@@ -106,10 +106,13 @@ private struct CandidateRowView: View {
                     .frame(width: 16)
             }
 
-            Text(candidate.displayName)
-                .font(candidate.isDirectory ? .body.weight(.semibold) : .body)
-                .foregroundColor(candidate.isDirectory ? .secondary : .primary)
-                .lineLimit(1)
+            highlightedName(
+                candidate.displayName,
+                indices: Set(candidate.matchedIndices),
+                defaultColor: candidate.isDirectory ? .secondary : .primary,
+                isDirectory: candidate.isDirectory
+            )
+            .lineLimit(1)
 
             Spacer()
         }
@@ -121,6 +124,35 @@ private struct CandidateRowView: View {
         .accessibilityLabel(candidate.isDirectory
             ? "\(candidate.displayName) directory"
             : "\(candidate.displayName) markdown file")
+    }
+
+    private func highlightedName(_ name: String, indices: Set<Int>, defaultColor: Color, isDirectory: Bool) -> Text {
+        var result = Text("")
+        var currentIndex = name.startIndex
+        while currentIndex < name.endIndex {
+            let offset = name.distance(from: name.startIndex, to: currentIndex)
+            let isMatch = indices.contains(offset)
+            var endIndex = currentIndex
+            while endIndex < name.endIndex {
+                let endOffset = name.distance(from: name.startIndex, to: endIndex)
+                if indices.contains(endOffset) != isMatch { break }
+                name.formIndex(after: &endIndex)
+            }
+            let chunk = String(name[currentIndex..<endIndex])
+            let text: Text
+            if isMatch {
+                text = Text(chunk)
+                    .foregroundColor(.accentColor)
+                    .font(.body.weight(.bold))
+            } else {
+                text = Text(chunk)
+                    .foregroundColor(defaultColor)
+                    .font(isDirectory ? .body.weight(.semibold) : .body)
+            }
+            result = result + text
+            currentIndex = endIndex
+        }
+        return result
     }
 }
 

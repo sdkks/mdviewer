@@ -4,6 +4,7 @@ struct Theme: Identifiable {
     let id: String
     let name: String
     let colors: ThemeColors
+    let highlightTheme: String
 }
 
 struct ThemeColors {
@@ -15,6 +16,7 @@ struct ThemeColors {
     let blockquoteFg: String
     let blockquoteBorder: String
     let hr: String
+    let mermaidError: String
 
     func cssVariables() -> String {
         return """
@@ -26,6 +28,7 @@ struct ThemeColors {
         --color-blockquote-fg: \(blockquoteFg);
         --color-blockquote-border: \(blockquoteBorder);
         --color-hr: \(hr);
+        --color-mermaid-error: \(mermaidError);
         """
     }
 }
@@ -43,8 +46,10 @@ extension Theme {
                 link: "#0969da",
                 blockquoteFg: "#656d76",
                 blockquoteBorder: "#d0d7de",
-                hr: "#d8dee4"
-            )
+                hr: "#d8dee4",
+                mermaidError: "#cf222e"
+            ),
+            highlightTheme: "github-light"
         ),
         Theme(
             id: "solarized-light",
@@ -57,8 +62,10 @@ extension Theme {
                 link: "#268bd2",
                 blockquoteFg: "#586e75",
                 blockquoteBorder: "#93a1a1",
-                hr: "#93a1a1"
-            )
+                hr: "#93a1a1",
+                mermaidError: "#cf222e"
+            ),
+            highlightTheme: "github-light"
         ),
         Theme(
             id: "github-dark",
@@ -71,8 +78,10 @@ extension Theme {
                 link: "#58a6ff",
                 blockquoteFg: "#8b949e",
                 blockquoteBorder: "#30363d",
-                hr: "#21262d"
-            )
+                hr: "#21262d",
+                mermaidError: "#f85149"
+            ),
+            highlightTheme: "github-dark"
         ),
         Theme(
             id: "dracula",
@@ -85,8 +94,10 @@ extension Theme {
                 link: "#bd93f9",
                 blockquoteFg: "#6272a4",
                 blockquoteBorder: "#44475a",
-                hr: "#44475a"
-            )
+                hr: "#44475a",
+                mermaidError: "#f85149"
+            ),
+            highlightTheme: "github-dark"
         ),
         Theme(
             id: "solarized-dark",
@@ -99,8 +110,10 @@ extension Theme {
                 link: "#268bd2",
                 blockquoteFg: "#586e75",
                 blockquoteBorder: "#073642",
-                hr: "#073642"
-            )
+                hr: "#073642",
+                mermaidError: "#f85149"
+            ),
+            highlightTheme: "github-dark"
         ),
         Theme(
             id: "monokai",
@@ -113,8 +126,10 @@ extension Theme {
                 link: "#66d9ef",
                 blockquoteFg: "#75715e",
                 blockquoteBorder: "#49483e",
-                hr: "#49483e"
-            )
+                hr: "#49483e",
+                mermaidError: "#f85149"
+            ),
+            highlightTheme: "github-dark"
         ),
         Theme(
             id: "nord",
@@ -127,8 +142,10 @@ extension Theme {
                 link: "#88c0d0",
                 blockquoteFg: "#d8dee9",
                 blockquoteBorder: "#4c566a",
-                hr: "#4c566a"
-            )
+                hr: "#4c566a",
+                mermaidError: "#f85149"
+            ),
+            highlightTheme: "github-dark"
         )
     ]
 
