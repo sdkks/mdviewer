@@ -490,14 +490,18 @@ a:focus-visible, pre.mermaid:focus-visible {
     // to Swift via window.webkit.messageHandlers.mermaidPNGExport.
     window.startMermaidPNGExport = function() {
         const diagrams = document.querySelectorAll('pre.mermaid svg');
-        const scale = window.devicePixelRatio || 2;
-        const results = [];
-        let completed = 0;
-
+        if (!window.webkit || !window.webkit.messageHandlers || !window.webkit.messageHandlers.mermaidPNGExport) {
+            console.error('mermaidPNGExport message handler not available');
+            return;
+        }
         if (diagrams.length === 0) {
             window.webkit.messageHandlers.mermaidPNGExport.postMessage({diagrams: []});
             return;
         }
+
+        const scale = window.devicePixelRatio || 2;
+        const results = [];
+        let completed = 0;
 
         function checkDone() {
             completed++;
@@ -509,6 +513,11 @@ a:focus-visible, pre.mermaid:focus-visible {
 
         Array.from(diagrams).forEach(function(svg, index) {
             const rect = svg.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) {
+                results.push({index: index, png: ''});
+                checkDone();
+                return;
+            }
             const canvas = document.createElement('canvas');
             canvas.width = Math.max(1, Math.ceil(rect.width * scale));
             canvas.height = Math.max(1, Math.ceil(rect.height * scale));
@@ -516,21 +525,18 @@ a:focus-visible, pre.mermaid:focus-visible {
             ctx.scale(scale, scale);
 
             const svgString = inlineSVGStyles(svg);
-            const blob = new Blob([svgString], {type: 'image/svg+xml;charset=utf-8'});
-            const url = URL.createObjectURL(blob);
+            const dataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgString);
             const img = new Image();
             img.onload = function() {
                 ctx.drawImage(img, 0, 0, rect.width, rect.height);
-                URL.revokeObjectURL(url);
                 results.push({index: index, png: canvas.toDataURL('image/png')});
                 checkDone();
             };
             img.onerror = function() {
-                URL.revokeObjectURL(url);
                 results.push({index: index, png: ''});
                 checkDone();
             };
-            img.src = url;
+            img.src = dataUrl;
         });
     };
 </script>
