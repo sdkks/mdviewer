@@ -49,13 +49,13 @@ tap-push:
 		echo "Tap repo not found at ../homebrew-tap — clone it first: git clone git@github.com:sdkks/homebrew-tap.git ../homebrew-tap"; \
 		exit 1; \
 	}
+	cd ../homebrew-tap && git pull --rebase
 	mkdir -p ../homebrew-tap/Casks
 	cp tap/Casks/mdviewer.rb ../homebrew-tap/Casks/mdviewer.rb
 	cd ../homebrew-tap && \
-		git pull --rebase && \
 		git add Casks/mdviewer.rb && \
-		git diff --cached --quiet || git commit -m "mdviewer $(VERSION)" && \
-		git push
+		git diff --cached --quiet || git commit -m "mdviewer $(VERSION)"
+	cd ../homebrew-tap && git push
 
 version-bump:
 	@bash scripts/version-bump.sh
