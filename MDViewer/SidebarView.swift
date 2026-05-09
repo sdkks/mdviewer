@@ -119,11 +119,14 @@ struct SidebarView: View {
             .buttonStyle(.plain)
             .foregroundColor(.secondary)
 
-            Text(url.lastPathComponent)
-                .font(.system(size: 13, weight: isCurrent ? .semibold : .regular))
-                .lineLimit(1)
-                .truncationMode(.middle)
-                .foregroundColor(isCurrent ? .accentColor : .primary)
+            Button(action: { documentState.load(url: url) }) {
+                Text(url.lastPathComponent)
+                    .font(.system(size: 13, weight: isCurrent ? .semibold : .regular))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .foregroundColor(isCurrent ? .accentColor : .primary)
+            }
+            .buttonStyle(.plain)
 
             Spacer()
         }
@@ -131,70 +134,70 @@ struct SidebarView: View {
         .padding(.vertical, 2)
         .background(isCurrent ? Color.accentColor.opacity(0.1) : Color.clear)
         .cornerRadius(4)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            documentState.load(url: url)
-        }
     }
 
     // MARK: - Header Row
 
     private func h1Row(text: String, anchorID: String, fileURL: URL) -> some View {
-        HStack(spacing: 0) {
-            Rectangle()
-                .fill(Color.secondary.opacity(0.3))
-                .frame(width: 1)
-                .padding(.leading, 12)
-
-            Text(text)
-                .font(.system(size: 12))
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .foregroundColor(.secondary)
-                .padding(.leading, 8)
-                .padding(.vertical, 1)
-
-            Spacer()
-        }
-        .contentShape(Rectangle())
-        .onTapGesture {
+        Button(action: {
             if fileURL == documentState.currentURL {
                 documentState.scrollToAnchor(anchorID)
             } else {
                 documentState.load(url: fileURL, scrollToAnchor: anchorID)
             }
+        }) {
+            HStack(spacing: 0) {
+                Rectangle()
+                    .fill(Color.secondary.opacity(0.3))
+                    .frame(width: 1)
+                    .padding(.leading, 12)
+
+                Text(text)
+                    .font(.system(size: 12))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .foregroundColor(.secondary)
+                    .padding(.leading, 8)
+                    .padding(.vertical, 1)
+
+                Spacer()
+            }
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
     }
 
     private func h2Row(text: String, anchorID: String, fileURL: URL) -> some View {
-        HStack(spacing: 0) {
-            Rectangle()
-                .fill(Color.clear)
-                .frame(width: 12)
-
-            Rectangle()
-                .fill(Color.secondary.opacity(0.2))
-                .frame(width: 1)
-                .padding(.leading, 4)
-
-            Text(text)
-                .font(.system(size: 11))
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .foregroundColor(.secondary.opacity(0.8))
-                .padding(.leading, 8)
-                .padding(.vertical, 1)
-
-            Spacer()
-        }
-        .contentShape(Rectangle())
-        .onTapGesture {
+        Button(action: {
             if fileURL == documentState.currentURL {
                 documentState.scrollToAnchor(anchorID)
             } else {
                 documentState.load(url: fileURL, scrollToAnchor: anchorID)
             }
+        }) {
+            HStack(spacing: 0) {
+                Rectangle()
+                    .fill(Color.clear)
+                    .frame(width: 12)
+
+                Rectangle()
+                    .fill(Color.secondary.opacity(0.2))
+                    .frame(width: 1)
+                    .padding(.leading, 4)
+
+                Text(text)
+                    .font(.system(size: 11))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .foregroundColor(.secondary.opacity(0.8))
+                    .padding(.leading, 8)
+                    .padding(.vertical, 1)
+
+                Spacer()
+            }
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Helpers
