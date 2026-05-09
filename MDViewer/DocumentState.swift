@@ -194,7 +194,8 @@ final class DocumentState: ObservableObject {
             presentExportAlert(message: "No web view available.")
             return
         }
-        webView.evaluateJavaScript("window.exportMermaidSVGs()") { [weak self] result, error in
+        let js = format == .png ? "window.exportMermaidPNGs()" : "window.exportMermaidSVGs()"
+        webView.evaluateJavaScript(js) { [weak self] result, error in
             DispatchQueue.main.async {
                 guard let self = self else { return }
                 if let error = error {
@@ -218,17 +219,21 @@ final class DocumentState: ObservableObject {
             try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
 
             for (index, diagram) in diagrams.enumerated() {
-                guard let svgString = diagram["svg"] as? String else { continue }
                 let filename = "diagram-\(index + 1).\(format.fileExtension)"
                 let fileURL = tempDir.appendingPathComponent(filename)
 
                 switch format {
                 case .svg:
+                    guard let svgString = diagram["svg"] as? String else { continue }
                     try svgString.write(to: fileURL, atomically: true, encoding: .utf8)
                 case .png:
-                    if let pngData = svgToPNGData(svgString) {
-                        try pngData.write(to: fileURL)
-                    }
+                    guard let pngDataUrl = diagram["png"] as? String, !pngDataUrl.isEmpty else { continue }
+                    let base64Prefix = "data:image/png;base64,"
+                    let base64String = pngDataUrl.hasPrefix(base64Prefix)
+                        ? String(pngDataUrl.dropFirst(base64Prefix.count))
+                        : pngDataUrl
+                    guard let data = Data(base64Encoded: base64String) else { continue }
+                    try data.write(to: fileURL)
                 }
             }
 
@@ -259,17 +264,6 @@ final class DocumentState: ObservableObject {
             presentExportAlert(message: "Failed to create export: \(error.localizedDescription)")
             try? FileManager.default.removeItem(at: tempDir)
         }
-    }
-
-    private func svgToPNGData(_ svgString: String) -> Data? {
-        guard let data = svgString.data(using: .utf8),
-              let image = NSImage(data: data),
-              let tiffData = image.tiffRepresentation,
-              let bitmap = NSBitmapImageRep(data: tiffData),
-              let pngData = bitmap.representation(using: .png, properties: [:]) else {
-            return nil
-        }
-        return pngData
     }
 
     private func createZip(at zipURL: URL, sourceDir: URL, files: [String]) throws {
