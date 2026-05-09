@@ -63,24 +63,29 @@ final class DocumentState: ObservableObject {
     }
 
     func scrollToAnchor(_ anchor: String) {
-        // Use location.hash for reliable anchor scrolling in WKWebView.
-        // scrollIntoView is unreliable inside loadHTMLString-backed views.
+        NSLog("[scrollToAnchor] called with id='%@' webView=%@", anchor, webView == nil ? "nil" : "ok")
+        guard let webView = webView else {
+            NSLog("[scrollToAnchor] webView is nil")
+            return
+        }
         let escaped = anchor
             .replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "'", with: "\\'")
-            .replacingOccurrences(of: "\"", with: "\\\"")
         let js = """
             (function() {
                 var el = document.getElementById('\(escaped)');
-                if (!el) return 'not found';
-                location.hash = '#\(escaped)';
-                return 'ok';
+                if (!el) return {status:'notfound', id:'\(escaped)'};
+                window.scrollTo(0, el.offsetTop);
+                return {status:'ok', id:'\(escaped)', top: el.offsetTop};
             })()
             """
-        webView?.evaluateJavaScript(js) { result, error in
-            if result as? String != "ok" {
-                NSLog("scrollToAnchor failed for '%@': %@", anchor, String(describing: error))
+        NSLog("[scrollToAnchor] evaluating JS")
+        webView.evaluateJavaScript(js) { result, error in
+            if let err = error {
+                NSLog("[scrollToAnchor] JS error: %@", String(describing: err))
+                return
             }
+            NSLog("[scrollToAnchor] JS result: %@", String(describing: result))
         }
     }
 

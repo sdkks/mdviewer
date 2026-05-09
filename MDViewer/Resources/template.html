@@ -465,6 +465,7 @@ a:focus-visible, pre.mermaid:focus-visible {
                     currentH1.h2s.push({text: el.textContent || '', id: id});
                 }
             });
+            console.log('[mermaidH1Headers] posting', headers.length, 'H1s');
             window.webkit.messageHandlers.mermaidH1Headers.postMessage(headers);
         }
     })();

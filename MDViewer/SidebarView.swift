@@ -140,6 +140,7 @@ struct SidebarView: View {
 
     private func h1Row(text: String, anchorID: String, fileURL: URL) -> some View {
         Button(action: {
+            NSLog("[Sidebar] H1 tapped: text='%@' anchor='%@' file='%@' current='%@'", text, anchorID, fileURL.lastPathComponent, documentState.currentURL?.lastPathComponent ?? "nil")
             if fileURL == documentState.currentURL {
                 documentState.scrollToAnchor(anchorID)
             } else {
@@ -169,6 +170,7 @@ struct SidebarView: View {
 
     private func h2Row(text: String, anchorID: String, fileURL: URL) -> some View {
         Button(action: {
+            NSLog("[Sidebar] H2 tapped: text='%@' anchor='%@' file='%@' current='%@'", text, anchorID, fileURL.lastPathComponent, documentState.currentURL?.lastPathComponent ?? "nil")
             if fileURL == documentState.currentURL {
                 documentState.scrollToAnchor(anchorID)
             } else {
