@@ -8,10 +8,11 @@
 ## Table of Contents
 
 1. [Syntax Highlighting](#syntax-highlighting)
-2. [Mermaid Diagrams](#mermaid-diagrams)
-3. [Footnotes](#footnotes)
-4. [Internal Link Navigation](#internal-link-navigation)
-5. [Keyboard Shortcuts Cheat Sheet](#keyboard-shortcuts-cheat-sheet)
+2. [Local Images & Video](#local-images--video)
+3. [Mermaid Diagrams](#mermaid-diagrams)
+4. [Footnotes](#footnotes)
+5. [Internal Link Navigation](#internal-link-navigation)
+6. [Keyboard Shortcuts Cheat Sheet](#keyboard-shortcuts-cheat-sheet)
 
 ---
 
@@ -92,6 +93,34 @@ def fuzzy_score(query, text):
 func unknown() -> Void {
     echo "fallback"
 }
+```
+
+---
+
+## Local Images & Video
+
+Images referenced with relative paths are resolved against the markdown file's directory.
+
+### Markdown Image Syntax
+
+```markdown
+![Screenshot](./assets/screenshot.png)
+```
+
+### HTML Image Tags
+
+```html
+<img src="./assets/logo.gif" width="200">
+```
+
+Supported formats: PNG, JPEG, GIF (animated), WebP, SVG, BMP, TIFF.
+
+### Video (HTML)
+
+Standard markdown has no video syntax — use a raw HTML `<video>` tag:
+
+```html
+<video src="./assets/demo.mp4" controls width="400"></video>
 ```
 
 ---

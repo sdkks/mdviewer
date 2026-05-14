@@ -12,6 +12,7 @@ A minimal macOS Markdown viewer. No editor, no bloat — just clean rendering wi
 
 - **GitHub-flavored rendering** via [marked.js](https://marked.js.org)
 - **Syntax highlighting** — code blocks auto-detected and highlighted via [highlight.js](https://highlightjs.org)
+- **Local images & video** — `![alt](path)` and `<img>` tags resolve relative to the markdown file; `<video>` tags work too
 - **Mermaid diagrams** — fenced ` ```mermaid ` blocks render natively as SVG with zoom, pan, and keyboard controls
 - **Diagram export** — save any Mermaid diagram as SVG or PNG (File → Export Mermaid Diagram)
 - **Dark Mode** — automatic (system), light, or dark via View > Appearance
