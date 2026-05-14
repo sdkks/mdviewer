@@ -58,6 +58,9 @@ struct MarkdownWebView: NSViewRepresentable {
         var lastRenderedText: String?
         var lastRenderedTheme: String?
         var baseDirectory: URL?
+        var previousRenderDirectory: URL?
+        var previousRenderFileURL: URL?
+        fileprivate var fileDeletionWorkItem: DispatchWorkItem?
 
         func userContentController(
             _ userContentController: WKUserContentController,
@@ -134,6 +137,18 @@ struct MarkdownWebView: NSViewRepresentable {
                 }
             }
         }
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            fileDeletionWorkItem?.cancel()
+            let url = previousRenderFileURL
+            fileDeletionWorkItem = DispatchWorkItem { [weak self] in
+                if let url {
+                    try? FileManager.default.removeItem(at: url)
+                }
+                self?.fileDeletionWorkItem = nil
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1, execute: fileDeletionWorkItem!)
+        }
     }
 
     func makeCoordinator() -> Coordinator {
@@ -152,7 +167,7 @@ struct MarkdownWebView: NSViewRepresentable {
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
         webView.pageZoom = zoomLevel
-        loadContent(into: webView)
+        loadContent(into: webView, coordinator: context.coordinator)
 
         // Store the webView reference on DocumentState for find command access.
         // Deferred to next run loop to avoid mutating state during view construction.
@@ -171,10 +186,10 @@ struct MarkdownWebView: NSViewRepresentable {
         guard text != c.lastRenderedText || theme.id != c.lastRenderedTheme else { return }
         c.lastRenderedText = text
         c.lastRenderedTheme = theme.id
-        loadContent(into: nsView)
+        loadContent(into: nsView, coordinator: c)
     }
 
-    private func loadContent(into webView: WKWebView) {
+    private func loadContent(into webView: WKWebView, coordinator: Coordinator) {
         guard let templateURL = Bundle.main.url(forResource: "template", withExtension: "html"),
               let markedURL = Bundle.main.url(forResource: "marked.min", withExtension: "js"),
               let mermaidURL = Bundle.main.url(forResource: "mermaid.min", withExtension: "js"),
@@ -211,11 +226,45 @@ struct MarkdownWebView: NSViewRepresentable {
             .replacingOccurrences(of: "{{FIT_DIAGRAMS}}", with: fitDiagramsToView ? "true" : "false")
             .replacingOccurrences(of: "{{MARKDOWN_CONTENT}}", with: escaped)
 
-        // Use the document's directory as baseURL so relative file:// links resolve
-        // correctly for inter-document navigation. Fall back to the template directory
-        // when no document is open (e.g., unsaved new document).
-        let baseURL = baseDirectory ?? templateURL.deletingLastPathComponent()
-        webView.loadHTMLString(html, baseURL: baseURL)
+        let fallbackBaseURL = templateURL.deletingLastPathComponent()
+
+        if let docDir = baseDirectory {
+            let renderFileURL = docDir.appendingPathComponent(".mdviewer-render.html")
+
+            // Cancel a pending deletion from a previous load so we don't delete the
+            // new file before the current load completes.
+            coordinator.fileDeletionWorkItem?.cancel()
+            coordinator.fileDeletionWorkItem = nil
+
+            // Cross-session cleanup: remove stale render file from a previous app launch.
+            let defaults = UserDefaults.standard
+            if let stalePath = defaults.string(forKey: "mdviewer.lastRenderFilePath"),
+               stalePath != renderFileURL.path,
+               FileManager.default.fileExists(atPath: stalePath) {
+                try? FileManager.default.removeItem(atPath: stalePath)
+            }
+
+            // Remove any existing render file in the current directory (e.g. from a crash
+            // or if the previous deletion didn't fire before the app quit).
+            if FileManager.default.fileExists(atPath: renderFileURL.path) {
+                try? FileManager.default.removeItem(at: renderFileURL)
+            }
+
+            do {
+                try html.write(to: renderFileURL, atomically: true, encoding: .utf8)
+                coordinator.previousRenderFileURL = renderFileURL
+                coordinator.previousRenderDirectory = docDir
+                defaults.set(renderFileURL.path, forKey: "mdviewer.lastRenderFilePath")
+                webView.loadFileURL(renderFileURL, allowingReadAccessTo: docDir)
+                return
+            } catch {
+                NSLog("[MarkdownWebView] Failed to write render file: \(error)")
+                // Fall through to loadHTMLString fallback.
+            }
+        }
+
+        // Fallback for unsaved new documents or when file write fails.
+        webView.loadHTMLString(html, baseURL: fallbackBaseURL)
     }
 }
 
