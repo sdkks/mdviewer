@@ -131,7 +131,13 @@ final class DocumentState: ObservableObject {
 
             if trimmed.hasPrefix("## ") {
                 let title = String(trimmed.dropFirst(3)).trimmingCharacters(in: .whitespaces)
-                currentH2s.append(HeaderItem(text: title, id: slugify(title)))
+                if nodes.isEmpty {
+                    nodes.append(HeaderNode(text: title, id: slugify(title), h2s: []))
+                    h1Count += 1
+                    if h1Count >= 20 { break }
+                } else {
+                    currentH2s.append(HeaderItem(text: title, id: slugify(title)))
+                }
             } else if trimmed.hasPrefix("# ") {
                 if !nodes.isEmpty {
                     nodes[nodes.count - 1] = HeaderNode(

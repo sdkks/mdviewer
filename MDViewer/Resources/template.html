@@ -525,6 +525,40 @@ a:focus-visible, pre.mermaid:focus-visible {
             metadata: parsed.value
         };
     }
+
+    function slugifyHeader(text) {
+        return String(text || '').toLowerCase().trim()
+            .replace(/\s+/g, '-')
+            .replace(/[^a-z0-9-]/g, '');
+    }
+
+    function collectH1H2HeadersFromElements(elements) {
+        const headers = [];
+        let currentH1 = null;
+        Array.prototype.forEach.call(elements, function(el) {
+            if (el.closest && el.closest('.frontmatter-card, .frontmatter-error')) {
+                return;
+            }
+            const text = el.textContent || '';
+            const id = el.id || slugifyHeader(text);
+            if (el.tagName === 'H1') {
+                currentH1 = {text: text, id: id, h2s: []};
+                headers.push(currentH1);
+            } else if (el.tagName === 'H2') {
+                if (currentH1) {
+                    currentH1.h2s.push({text: text, id: id});
+                } else {
+                    currentH1 = {text: text, id: id, h2s: []};
+                    headers.push(currentH1);
+                }
+            }
+        });
+        return headers;
+    }
+
+    function collectH1H2Headers(root) {
+        return collectH1H2HeadersFromElements(root.querySelectorAll('h1, h2'));
+    }
     // FRONTMATTER_HELPERS_END
 
     // Map mdviewer theme id → mermaid theme name
@@ -568,14 +602,9 @@ a:focus-visible, pre.mermaid:focus-visible {
 
     // Ensure all headers have anchor IDs for sidebar navigation
     (function() {
-        function slugify(text) {
-            return text.toLowerCase().trim()
-                .replace(/\s+/g, '-')
-                .replace(/[^a-z0-9-]/g, '');
-        }
         document.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach(function(el) {
             if (!el.id) {
-                el.id = slugify(el.textContent || '');
+                el.id = slugifyHeader(el.textContent || '');
             }
         });
     })();
@@ -747,22 +776,7 @@ a:focus-visible, pre.mermaid:focus-visible {
 
         // Notify Swift of the current document's H1/H2 header outline
         if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.mermaidH1Headers) {
-            function slugify(text) {
-                return text.toLowerCase().trim()
-                    .replace(/\s+/g, '-')
-                    .replace(/[^a-z0-9-]/g, '');
-            }
-            const headers = [];
-            let currentH1 = null;
-            document.querySelectorAll('h1, h2').forEach(function(el) {
-                var id = el.id || slugify(el.textContent || '');
-                if (el.tagName === 'H1') {
-                    currentH1 = {text: el.textContent || '', id: id, h2s: []};
-                    headers.push(currentH1);
-                } else if (el.tagName === 'H2' && currentH1) {
-                    currentH1.h2s.push({text: el.textContent || '', id: id});
-                }
-            });
+            const headers = collectH1H2Headers(document);
             console.log('[mermaidH1Headers] posting', headers.length, 'H1s');
             window.webkit.messageHandlers.mermaidH1Headers.postMessage(headers);
         }

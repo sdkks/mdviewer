@@ -165,4 +165,32 @@ assert.match(result.html, /language-yaml/);
 assert.match(result.html, /title: Not frontmatter/);
 assert.match(result.html, /After/);
 
+function normalizeHeaders(headers) {
+  return JSON.parse(JSON.stringify(headers));
+}
+
+const h2OnlyHeaders = normalizeHeaders(context.collectH1H2HeadersFromElements([
+  { tagName: 'H2', textContent: 'Overview', id: 'overview', closest: () => null },
+  { tagName: 'H2', textContent: 'Details', id: 'details', closest: () => null }
+]));
+assert.deepStrictEqual(h2OnlyHeaders, [
+  { text: 'Overview', id: 'overview', h2s: [{ text: 'Details', id: 'details' }] }
+]);
+
+const mixedHeaders = normalizeHeaders(context.collectH1H2HeadersFromElements([
+  { tagName: 'H1', textContent: 'Title', id: 'title', closest: () => null },
+  { tagName: 'H2', textContent: 'Section', id: 'section', closest: () => null }
+]));
+assert.deepStrictEqual(mixedHeaders, [
+  { text: 'Title', id: 'title', h2s: [{ text: 'Section', id: 'section' }] }
+]);
+
+const ignoredFrontmatterHeaders = normalizeHeaders(context.collectH1H2HeadersFromElements([
+  { tagName: 'H2', textContent: 'Metadata', id: 'frontmatter-title', closest: (selector) => selector.includes('frontmatter-card') ? {} : null },
+  { tagName: 'H2', textContent: 'Real Section', id: 'real-section', closest: () => null }
+]));
+assert.deepStrictEqual(ignoredFrontmatterHeaders, [
+  { text: 'Real Section', id: 'real-section', h2s: [] }
+]);
+
 console.log('frontmatter helper and Markdown extension regression tests passed');
