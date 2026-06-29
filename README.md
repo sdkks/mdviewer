@@ -177,6 +177,9 @@ This pushes all commits and tags, builds a Release archive, ad-hoc signs `MDView
 | [highlight.js](https://github.com/highlightjs/highlight.js)      | ~11.9   | BSD-3   | Syntax highlighting          |
 | [svg-pan-zoom](https://github.com/bumbu/svg-pan-zoom)            | ~3.6    | BSD-2   | Diagram zoom & pan           |
 | [marked-footnote](https://github.com/bent10/marked-extensions)   | —       | MIT     | Footnote support             |
+| [js-yaml](https://github.com/nodeca/js-yaml)                     | 4.1.0   | MIT     | YAML frontmatter parsing     |
+
+Vendored browser assets live in `MDViewer/Resources` and are loaded from the app bundle; MDViewer must not depend on CDN/network access at runtime. See `MDViewer/Resources/README.md` for `js-yaml` source, bundle path, license, runtime, and upgrade notes.
 
 No Swift package dependencies. No external frameworks.
 

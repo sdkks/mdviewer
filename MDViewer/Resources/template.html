@@ -231,11 +231,107 @@ a:focus-visible, pre.mermaid:focus-visible {
     outline: 2px solid var(--color-accent, var(--color-link));
     outline-offset: 2px;
 }
+
+/* YAML frontmatter metadata */
+.frontmatter-card,
+.frontmatter-error {
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    margin: 0 0 16px 0;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--color-code-bg) 55%, var(--color-bg));
+}
+
+.frontmatter-card {
+    color: var(--color-fg);
+}
+
+.frontmatter-title,
+.frontmatter-error-title {
+    padding: 8px 12px;
+    font-weight: 600;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-code-bg);
+}
+
+.frontmatter-table {
+    width: 100%;
+    margin: 0;
+    table-layout: fixed;
+    border-collapse: collapse;
+}
+
+.frontmatter-table th,
+.frontmatter-table td {
+    padding: 6px 12px;
+    border: 1px solid var(--color-border);
+    vertical-align: top;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.frontmatter-table > tbody > tr:first-child > th,
+.frontmatter-table > tbody > tr:first-child > td {
+    border-top: 0;
+}
+
+.frontmatter-table th {
+    width: clamp(8rem, 25%, 14rem);
+    text-align: left;
+    font-weight: 600;
+}
+
+.frontmatter-value-list {
+    margin: 0;
+    padding-left: 1.5em;
+}
+
+.frontmatter-value-list li + li {
+    margin-top: 0.15em;
+}
+
+.frontmatter-null {
+    color: var(--color-blockquote-fg);
+    font-style: italic;
+}
+
+.frontmatter-json-fallback {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    margin: 0;
+    padding: 8px;
+}
+
+.frontmatter-error {
+    border-color: var(--color-mermaid-error);
+    background: color-mix(in srgb, var(--color-mermaid-error) 8%, var(--color-bg));
+}
+
+.frontmatter-error-title {
+    color: var(--color-mermaid-error);
+    border-bottom-color: color-mix(in srgb, var(--color-mermaid-error) 35%, var(--color-border));
+}
+
+.frontmatter-error p,
+.frontmatter-error details {
+    margin: 8px 12px;
+}
+
+.frontmatter-error-message {
+    color: var(--color-fg);
+}
+
+.frontmatter-error pre {
+    margin: 8px 0 0 0;
+    white-space: pre-wrap;
+    overflow-x: auto;
+}
 </style>
 <style>{{HIGHLIGHT_CSS}}</style>
 </head>
 <body>
 <div id="content"></div>
+<script>{{JS_YAML_JS}}</script>
 <script>{{MARKED_JS}}</script>
 <script>{{MERMAID_JS}}</script>
 <script>{{MARKED_FOOTNOTE_JS}}</script>
@@ -243,6 +339,193 @@ a:focus-visible, pre.mermaid:focus-visible {
 <script>{{HIGHLIGHT_JS}}</script>
 <script>
     // Content is from local user files rendered in a sandboxed WKWebView
+
+    // FRONTMATTER_HELPERS_START
+    function escapeHtml(value) {
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function splitLeadingYamlFrontmatter(markdown) {
+        const text = String(markdown == null ? '' : markdown);
+        const startOffset = text.charCodeAt(0) === 0xFEFF ? 1 : 0;
+
+        function readLine(offset) {
+            let end = offset;
+            while (end < text.length && text[end] !== '\n' && text[end] !== '\r') {
+                end += 1;
+            }
+            let next = end;
+            if (next < text.length) {
+                if (text[next] === '\r' && text[next + 1] === '\n') {
+                    next += 2;
+                } else {
+                    next += 1;
+                }
+            }
+            return { value: text.slice(offset, end), start: offset, end: end, next: next };
+        }
+
+        const firstLine = readLine(startOffset);
+        if (firstLine.value !== '---') {
+            return { hasFrontmatter: false, rawBlock: '', yamlText: '', bodyText: text };
+        }
+
+        const yamlStart = firstLine.next;
+        let cursor = yamlStart;
+        let closingLine = null;
+        while (cursor < text.length) {
+            const line = readLine(cursor);
+            if (line.value === '---') {
+                closingLine = line;
+                break;
+            }
+            cursor = line.next;
+        }
+
+        if (!closingLine) {
+            return { hasFrontmatter: false, rawBlock: '', yamlText: '', bodyText: text };
+        }
+
+        return {
+            hasFrontmatter: true,
+            rawBlock: text.slice(0, closingLine.end),
+            yamlText: text.slice(yamlStart, closingLine.start),
+            bodyText: text.slice(closingLine.next)
+        };
+    }
+
+    function parseYamlFrontmatter(yamlText) {
+        if (typeof jsyaml === 'undefined' || !jsyaml || typeof jsyaml.load !== 'function') {
+            return { ok: false, code: 'parser-missing', error: 'YAML parser is unavailable.' };
+        }
+        try {
+            const value = jsyaml.load(yamlText);
+            return { ok: true, value: value === undefined ? null : value };
+        } catch (err) {
+            return {
+                ok: false,
+                code: 'invalid',
+                error: (err && err.message) ? err.message : String(err)
+            };
+        }
+    }
+
+    function isPlainObject(value) {
+        return Object.prototype.toString.call(value) === '[object Object]';
+    }
+
+    function isEmptyMetadata(value) {
+        return value == null || (isPlainObject(value) && Object.keys(value).length === 0);
+    }
+
+    function renderFrontmatterValue(value, depth) {
+        const maxDepth = 3;
+        if (value == null) {
+            return '<span class="frontmatter-null">null</span>';
+        }
+        if (value instanceof Date) {
+            const time = value.getTime();
+            return escapeHtml(Number.isNaN(time) ? String(value) : value.toISOString());
+        }
+        if (Array.isArray(value)) {
+            if (depth >= maxDepth) {
+                return renderFrontmatterJsonFallback(value);
+            }
+            if (value.length === 0) {
+                return '<span class="frontmatter-null">empty list</span>';
+            }
+            return '<ul class="frontmatter-value-list">' + value.map(function(item) {
+                return '<li>' + renderFrontmatterValue(item, depth + 1) + '</li>';
+            }).join('') + '</ul>';
+        }
+        if (isPlainObject(value)) {
+            const keys = Object.keys(value);
+            if (keys.length === 0) {
+                return '<span class="frontmatter-null">empty object</span>';
+            }
+            if (depth >= maxDepth) {
+                return renderFrontmatterJsonFallback(value);
+            }
+            return '<table class="frontmatter-table"><tbody>' + keys.map(function(key) {
+                return '<tr><th scope="row">' + escapeHtml(key) + '</th><td>' + renderFrontmatterValue(value[key], depth + 1) + '</td></tr>';
+            }).join('') + '</tbody></table>';
+        }
+        return escapeHtml(String(value));
+    }
+
+    function renderFrontmatterJsonFallback(value) {
+        let serialized;
+        try {
+            serialized = JSON.stringify(value, function(key, item) {
+                if (item instanceof Date) {
+                    const time = item.getTime();
+                    return Number.isNaN(time) ? String(item) : item.toISOString();
+                }
+                return item;
+            }, 2);
+        } catch (err) {
+            serialized = String(value);
+        }
+        return '<pre class="frontmatter-json-fallback"><code>' + escapeHtml(serialized) + '</code></pre>';
+    }
+
+    function renderFrontmatterMetadata(value) {
+        if (isEmptyMetadata(value)) {
+            return '';
+        }
+        const tableValue = isPlainObject(value) ? value : { value: value };
+        const rows = Object.keys(tableValue).map(function(key) {
+            return '<tr><th scope="row">' + escapeHtml(key) + '</th><td>' + renderFrontmatterValue(tableValue[key], 1) + '</td></tr>';
+        }).join('');
+        return '<section class="frontmatter-card" aria-labelledby="frontmatter-title">' +
+            '<div id="frontmatter-title" class="frontmatter-title" role="heading" aria-level="2">Metadata</div>' +
+            '<table class="frontmatter-table"><tbody>' + rows + '</tbody></table>' +
+            '</section>';
+    }
+
+    function renderFrontmatterError(error, rawBlock, status) {
+        const title = status === 'parser-missing' ? 'Frontmatter parser unavailable' : 'Frontmatter parse error';
+        const message = error || (status === 'parser-missing' ? 'YAML parser is unavailable.' : 'The YAML frontmatter could not be parsed.');
+        return '<section class="frontmatter-error" role="alert" aria-labelledby="frontmatter-error-title">' +
+            '<div id="frontmatter-error-title" class="frontmatter-error-title" role="heading" aria-level="2">' + escapeHtml(title) + '</div>' +
+            '<p>The document body is rendered below, but the YAML frontmatter metadata could not be displayed.</p>' +
+            '<p class="frontmatter-error-message">' + escapeHtml(message) + '</p>' +
+            '<details open><summary>Original frontmatter</summary><pre><code>' + escapeHtml(rawBlock) + '</code></pre></details>' +
+            '</section>';
+    }
+
+    function processFrontmatter(markdown) {
+        const split = splitLeadingYamlFrontmatter(markdown);
+        if (!split.hasFrontmatter) {
+            return { markdown: split.bodyText, html: '', status: 'none' };
+        }
+        const parsed = parseYamlFrontmatter(split.yamlText);
+        if (!parsed.ok) {
+            const status = parsed.code === 'parser-missing' ? 'parser-missing' : 'invalid';
+            return {
+                markdown: split.bodyText,
+                html: renderFrontmatterError(parsed.error, split.rawBlock, status),
+                status: status,
+                error: parsed.error,
+                rawBlock: split.rawBlock
+            };
+        }
+        if (isEmptyMetadata(parsed.value)) {
+            return { markdown: split.bodyText, html: '', status: 'empty', metadata: parsed.value };
+        }
+        return {
+            markdown: split.bodyText,
+            html: renderFrontmatterMetadata(parsed.value),
+            status: 'parsed',
+            metadata: parsed.value
+        };
+    }
+    // FRONTMATTER_HELPERS_END
 
     // Map mdviewer theme id → mermaid theme name
     const MERMAID_THEME_MAP = {
@@ -280,7 +563,8 @@ a:focus-visible, pre.mermaid:focus-visible {
     }
 
     const md = `{{MARKDOWN_CONTENT}}`;
-    document.getElementById('content').innerHTML = marked.parse(md);
+    const frontmatterResult = processFrontmatter(md);
+    document.getElementById('content').innerHTML = frontmatterResult.html + marked.parse(frontmatterResult.markdown);
 
     // Ensure all headers have anchor IDs for sidebar navigation
     (function() {

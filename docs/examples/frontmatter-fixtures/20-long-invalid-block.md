@@ -1,0 +1,88 @@
+---
+title: Long Invalid Block
+items:
+  - item 1: [unterminated
+  - item 2: [unterminated
+  - item 3: [unterminated
+  - item 4: [unterminated
+  - item 5: [unterminated
+  - item 6: [unterminated
+  - item 7: [unterminated
+  - item 8: [unterminated
+  - item 9: [unterminated
+  - item 10: [unterminated
+  - item 11: [unterminated
+  - item 12: [unterminated
+  - item 13: [unterminated
+  - item 14: [unterminated
+  - item 15: [unterminated
+  - item 16: [unterminated
+  - item 17: [unterminated
+  - item 18: [unterminated
+  - item 19: [unterminated
+  - item 20: [unterminated
+  - item 21: [unterminated
+  - item 22: [unterminated
+  - item 23: [unterminated
+  - item 24: [unterminated
+  - item 25: [unterminated
+  - item 26: [unterminated
+  - item 27: [unterminated
+  - item 28: [unterminated
+  - item 29: [unterminated
+  - item 30: [unterminated
+  - item 31: [unterminated
+  - item 32: [unterminated
+  - item 33: [unterminated
+  - item 34: [unterminated
+  - item 35: [unterminated
+  - item 36: [unterminated
+  - item 37: [unterminated
+  - item 38: [unterminated
+  - item 39: [unterminated
+  - item 40: [unterminated
+  - item 41: [unterminated
+  - item 42: [unterminated
+  - item 43: [unterminated
+  - item 44: [unterminated
+  - item 45: [unterminated
+  - item 46: [unterminated
+  - item 47: [unterminated
+  - item 48: [unterminated
+  - item 49: [unterminated
+  - item 50: [unterminated
+  - item 51: [unterminated
+  - item 52: [unterminated
+  - item 53: [unterminated
+  - item 54: [unterminated
+  - item 55: [unterminated
+  - item 56: [unterminated
+  - item 57: [unterminated
+  - item 58: [unterminated
+  - item 59: [unterminated
+  - item 60: [unterminated
+  - item 61: [unterminated
+  - item 62: [unterminated
+  - item 63: [unterminated
+  - item 64: [unterminated
+  - item 65: [unterminated
+  - item 66: [unterminated
+  - item 67: [unterminated
+  - item 68: [unterminated
+  - item 69: [unterminated
+  - item 70: [unterminated
+  - item 71: [unterminated
+  - item 72: [unterminated
+  - item 73: [unterminated
+  - item 74: [unterminated
+  - item 75: [unterminated
+  - item 76: [unterminated
+  - item 77: [unterminated
+  - item 78: [unterminated
+  - item 79: [unterminated
+  - item 80: [unterminated
+---
+
+# Body After Long Invalid Block
+
+The body should render below the parse-error card, and the raw block should be escaped.

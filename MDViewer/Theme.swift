@@ -149,6 +149,10 @@ extension Theme {
         )
     ]
 
+    static var `default`: Theme {
+        theme(for: "github-light", in: themes)
+    }
+
     static func theme(for id: String, in themes: [Theme]) -> Theme {
         themes.first { $0.id == id } ?? themes[0]
     }

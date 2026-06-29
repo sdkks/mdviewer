@@ -30,7 +30,10 @@ final class RenderFileLifecycleTests: XCTestCase {
 
         let renderFileURL = docDir.appendingPathComponent(".mdviewer-render.html")
         XCTAssertEqual(renderFileURL.lastPathComponent, ".mdviewer-render.html")
-        XCTAssertEqual(renderFileURL.deletingLastPathComponent(), docDir)
+        XCTAssertEqual(
+            renderFileURL.deletingLastPathComponent().standardizedFileURL.path,
+            docDir.standardizedFileURL.path
+        )
     }
 
     // MARK: - didFinish deletion
@@ -42,10 +45,10 @@ final class RenderFileLifecycleTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: renderFile.path))
 
         coordinator.previousRenderFileURL = renderFile
-        coordinator.webView(WKWebView(), didFinish: WKNavigation())
+        coordinator.schedulePreviousRenderFileDeletion(after: 0.1)
 
         let expectation = self.expectation(description: "File deleted after delay")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             XCTAssertFalse(FileManager.default.fileExists(atPath: renderFile.path))
             expectation.fulfill()
         }
@@ -56,7 +59,7 @@ final class RenderFileLifecycleTests: XCTestCase {
         let coordinator = MarkdownWebView(text: "", zoomLevel: 1.0, theme: .default, baseDirectory: nil, fitDiagramsToView: false).makeCoordinator()
         coordinator.previousRenderFileURL = nil
         // Should not crash
-        coordinator.webView(WKWebView(), didFinish: WKNavigation())
+        coordinator.schedulePreviousRenderFileDeletion(after: 0.1)
     }
 
     func testDidFinish_cancelsPreviousWorkItem() {
@@ -65,14 +68,14 @@ final class RenderFileLifecycleTests: XCTestCase {
         try? "<html></html>".write(to: renderFile, atomically: true, encoding: .utf8)
 
         coordinator.previousRenderFileURL = renderFile
-        coordinator.webView(WKWebView(), didFinish: WKNavigation())
+        coordinator.schedulePreviousRenderFileDeletion(after: 0.2)
 
         // Second call should cancel the first work item and create a new one
-        coordinator.webView(WKWebView(), didFinish: WKNavigation())
+        coordinator.schedulePreviousRenderFileDeletion(after: 0.1)
 
         // File should still be deleted (by the second work item)
         let expectation = self.expectation(description: "File deleted after second delay")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             XCTAssertFalse(FileManager.default.fileExists(atPath: renderFile.path))
             expectation.fulfill()
         }

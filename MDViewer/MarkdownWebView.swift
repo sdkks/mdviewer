@@ -138,7 +138,7 @@ struct MarkdownWebView: NSViewRepresentable {
             }
         }
 
-        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        func schedulePreviousRenderFileDeletion(after delay: TimeInterval = 1) {
             fileDeletionWorkItem?.cancel()
             let url = previousRenderFileURL
             fileDeletionWorkItem = DispatchWorkItem { [weak self] in
@@ -147,7 +147,11 @@ struct MarkdownWebView: NSViewRepresentable {
                 }
                 self?.fileDeletionWorkItem = nil
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1, execute: fileDeletionWorkItem!)
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: fileDeletionWorkItem!)
+        }
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            schedulePreviousRenderFileDeletion()
         }
     }
 
@@ -198,6 +202,8 @@ struct MarkdownWebView: NSViewRepresentable {
               let mermaidJS = try? String(contentsOf: mermaidURL, encoding: .utf8)
         else { return }
 
+        let jsYamlURL = Bundle.main.url(forResource: "js-yaml.min", withExtension: "js")
+        let jsYamlJS = jsYamlURL.flatMap { try? String(contentsOf: $0, encoding: .utf8) } ?? ""
         let highlightURL = Bundle.main.url(forResource: "highlight.min", withExtension: "js")
         let highlightCSSURL = Bundle.main.url(forResource: "highlight-\(theme.highlightTheme).min", withExtension: "css")
         let highlightJS = highlightURL.flatMap { try? String(contentsOf: $0, encoding: .utf8) } ?? ""
@@ -216,6 +222,7 @@ struct MarkdownWebView: NSViewRepresentable {
 
         html = html
             .replacingOccurrences(of: "{{THEME_CSS}}", with: theme.colors.cssVariables())
+            .replacingOccurrences(of: "{{JS_YAML_JS}}", with: jsYamlJS)
             .replacingOccurrences(of: "{{MARKED_JS}}", with: markedJS)
             .replacingOccurrences(of: "{{MERMAID_JS}}", with: mermaidJS)
             .replacingOccurrences(of: "{{MARKED_FOOTNOTE_JS}}", with: footnoteJS)
